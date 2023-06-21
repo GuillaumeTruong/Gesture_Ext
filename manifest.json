@@ -15,7 +15,8 @@
         "matches": ["<all_urls>"],
         "resources": [
           "scripts/*",
-          "models/*"
+          "models/*",
+          "wasm/*"
         ]
     }],
     "host_permissions": [

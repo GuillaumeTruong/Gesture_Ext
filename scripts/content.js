@@ -135,7 +135,7 @@ function initDocument() {
 async function initMediapipe() {
 
     vision = await FilesetResolver.forVisionTasks(
-        `chrome-extension://${extId}/scripts`
+        `chrome-extension://${extId}/wasm`
     );
     
     // Hand
@@ -179,48 +179,9 @@ function initFingerPose() {
 
 async function enableCam() {
 
-    // let camera1Id = "";
-
-    // if (!navigator.mediaDevices?.enumerateDevices) {
-
-    //     console.log("enumerateDevices() not supported.");
-
-    // } else {
-    //     // List cameras and microphones.
-    //     navigator.mediaDevices
-    //     .enumerateDevices()
-    //     .then((devices) => {
-    //         devices.forEach((device) => {
-                
-    //             console.log(`${device.kind}: ${device.label} id = ${device.deviceId}`);
-    //             if( device.kind === "videoinput" & device.label !== "OBS Virtual Camera" ) {
-
-    //                 camera1Id = device.deviceId;
-    //                 console.log( camera1Id );
-
-    //             }
-    //         });
-    //     })
-    //     .catch((err) => {
-
-    //         console.error(`${err.name}: ${err.message}`);
-
-    //     });
-    //   }
-
-    // if ( !gestureRecognizer ) {
-
-    //   alert( "Please wait for gestureRecognizer to load" );
-    //   return;
-    // }
-  
-    // getUsermedia parameters.
-    // console.log( window.innerWidth );
     const constraints = {
         video: {
-            // deviceId: camera1Id,
-            width: window.innerWidth,
-            // height: window.innerHeight,
+            width: window.innerWidth
         },
     };
 
@@ -234,25 +195,18 @@ async function enableCam() {
 
 function startStream( stream, stream_settings ) {
 
-    // video.height = window.innerHeight;
-    // video.width = Math.floor( window.innerHeight * stream_settings.aspectRatio );
-
     console.log( stream_settings );
     video.height = Math.floor( window.innerWidth / stream_settings.aspectRatio );
     video.width = window.innerWidth;
     
     const webcamElement = document.getElementById( "webcam" );
 
-    // video.videoHeight =  video.height;
-    // video.videoWidth =  video.width;
     canvasElement.height = video.height;
     canvasElement.width = video.width;
     webcamElement.height = video.height;
     webcamElement.width = video.width;
     canvasElementSegmentation.height = video.height;
     canvasElementSegmentation.width = video.width;
-    // let scale = window.innerWidth / stream_settings.width;
-    // canvasCtxSeg.scale(scale, scale);
 
     video.srcObject = stream;
     video.addEventListener("loadeddata", predictWebcam);
@@ -333,8 +287,8 @@ const legendColors = [
 
 function drawSelfie( resultSegmenter, resultsGesture ) {
     
-    console.log( resultsGesture );
-    console.log( resultSegmenter );
+    // console.log( resultsGesture );
+    // console.log( resultSegmenter );
 
     canvasTmp.width = video.videoWidth;
     canvasTmp.height = video.videoHeight;
@@ -422,16 +376,13 @@ function actionHandler( landmarks, handednesses ) {
     }
     
 
-    if ( handednesses.categoryName === "Left" )
-        console.log( handednesses.categoryName + " : " +handAction[ handednesses.categoryName ].actionState + " ; " + gesture.name );
-    // console.log( landmarks );
-    // console.log( fingerEst.estimate( landmarks ).curls );
+    // if ( handednesses.categoryName === "Left" )
+    //     console.log( handednesses.categoryName + " : " +handAction[ handednesses.categoryName ].actionState + " ; " + gesture.name );
 
     switch( gesture.name ) {
 
         case "Closed_Fist": {
 
-            // console.log( "Closed_Fist" );
             closedFistHandler( landmarks, handednesses.categoryName );
             break;
 
@@ -439,7 +390,6 @@ function actionHandler( landmarks, handednesses ) {
 
         case "Pointing": {
 
-            // console.log( "Pointing" );
             pointingHandler( landmarks, handednesses.categoryName );
             break;
             
@@ -447,7 +397,6 @@ function actionHandler( landmarks, handednesses ) {
 
         case "None": {
 
-            // console.log( "Open_Palm" );
             noneHandler( landmarks, handednesses.categoryName );
             break;
             
