@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "Hello Extensions",
+    "description": "Base Level Extension2",
+    "version": "1.0",
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+        "default_title": "Gesture!",
+        "default_icon": "logo.png"
+    },
+    "permissions": ["activeTab", "scripting"],
+    "web_accessible_resources": [{
+        "matches": ["<all_urls>"],
+        "resources": [
+          "scripts/*",
+          "models/*"
+        ]
+    }],
+    "host_permissions": [
+      "<all_urls>"
+    ]
+}
