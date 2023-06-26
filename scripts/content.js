@@ -57,10 +57,12 @@ let mouseDownOption = {
 
 let selfieState = "IDLE";
 let selfieOption = {
+    enable: false,
+    spaceAround: 0.05,
     opacityBackground: 0,
-    opacityIdle: 0.5,
-    opacityHand: 0.5,
-    opacityBody: 0.2
+    opacityIdle: Math.floor( 0.7 * 255 ),
+    opacityHand: Math.floor( 0.6 * 255 ),
+    opacityBody: Math.floor( 0.2 * 255 )
 }
 // let rectClickSizeX = 50;
 // let rectClickSizeY = 50;
@@ -224,7 +226,7 @@ async function predictWebcam() {
     drawHands( resultsGesture );
     canvasCtx.restore();
 
-    // selfieState = ( resultsGesture.handednesses.length > 0 ) ? "HANDS_UP" : "IDLE";
+    selfieState = ( selfieOption.enable && resultsGesture.handednesses.length > 0 ) ? "HANDS_UP" : "IDLE";
 
     // Selfie Segmenter
     imageSegmenter.segmentForVideo(
@@ -251,8 +253,6 @@ async function predictWebcam() {
 
 function drawHands( results ) {
 
-    const webcamElement = document.getElementById( "webcam" );
-
     let colorRight = "rgba(0, 255, 0, 0.5)";
     let colorLeft = "rgba(255, 0, 0, 0.5)";
     let color = "rgba(0, 0, 0, 0.5)";
@@ -278,17 +278,13 @@ function drawHands( results ) {
 
     }
 
-}
-
-const legendColors = [
-    [255, 197, 0, 0], // Vivid Yellow
-    [0, 161, 194, 0.8], // Vivid Blue
-];           
+}      
 
 function drawSelfie( resultSegmenter, resultsGesture ) {
     
     // console.log( resultsGesture );
     // console.log( resultSegmenter );
+
 
     canvasTmp.width = video.videoWidth;
     canvasTmp.height = video.videoHeight;
@@ -303,6 +299,7 @@ function drawSelfie( resultSegmenter, resultsGesture ) {
     ).data;
 
     const mask = resultSegmenter.categoryMask.getAsFloat32Array();
+    let isBackground;
 
     switch ( selfieState ) {
 
@@ -311,12 +308,14 @@ function drawSelfie( resultSegmenter, resultsGesture ) {
             let j = 0;
             for (let i = 0; i < mask.length; ++i) {
         
-                const maskVal = Math.round(mask[i] * 255.0);
-                const legendColor = legendColors[maskVal % legendColors.length];
+                isBackground = mask[ i ] === 0;
+                // const maskVal = Math.round(mask[i] * 255.0);
+                // const legendColor = legendColors[maskVal % legendColors.length];
                 // imageData[j + 0] = legendColor[0] * imageData[j + 0];
                 // imageData[j + 1] = legendColor[1] * imageData[j + 1];
                 // imageData[j + 2] = legendColor[2] * imageData[j + 2];
-                imageData[j + 3] = legendColor[3] * imageData[j + 3];
+
+                imageData[ j + 3 ] = isBackground ? selfieOption.opacityBackground : selfieOption.opacityIdle;
                 j += 4;
         
             }
@@ -326,6 +325,73 @@ function drawSelfie( resultSegmenter, resultsGesture ) {
 
         case "HANDS_UP" : {
 
+            let maxLandMark = { x: 0, y: 0 };
+            let minLandmark = { x: 1, y: 1 };
+            
+            for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
+        
+                resultsGesture.landmarks[ i ].forEach( element => {
+        
+                    maxLandMark.x = Math.min( 1, Math.max( element.x * ( 1 + selfieOption.spaceAround ), maxLandMark.x ) );
+                    maxLandMark.y = Math.min( 1, Math.max( element.y * ( 1 + selfieOption.spaceAround ), maxLandMark.y ) );
+                    minLandmark.x = Math.max( 0, Math.min( element.x * ( 1 - selfieOption.spaceAround ), minLandmark.x ) );
+                    minLandmark.y = Math.max( 0, Math.min( element.y * ( 1 - selfieOption.spaceAround ), minLandmark.y ) );
+                    
+                }); 
+        
+            }
+            
+            // console.log( maxLandMark );
+
+            maxLandMark.x = Math.floor( maxLandMark.x * video.videoWidth );
+            maxLandMark.y = Math.floor( maxLandMark.y * video.videoHeight );
+            minLandmark.x = Math.floor( minLandmark.x * video.videoWidth );
+            minLandmark.y = Math.floor( minLandmark.y * video.videoHeight );
+
+            // maxLandMark.n = maxLandMark.x + maxLandMark.y * video.videoHeight;
+            // minLandmark.n = minLandmark.x + minLandmark.y * video.videoHeight;
+
+            // console.log( maxLandMark );
+            // console.log( mask.length );
+            
+            let j = 0;
+            let start = minLandmark.x + minLandmark.y * video.videoWidth;
+            let end = maxLandMark.x + maxLandMark.y * video.videoWidth;
+            let diff = maxLandMark.x - minLandmark.x;
+            let n = 0;
+
+            for (let i = 0; i < mask.length; ++i) {
+
+                isBackground = mask[ i ] === 0;
+        
+                // const maskVal = Math.round(mask[ i ] * 255.0);
+                // const legendColor = legendColors[ maskVal % legendColors.length ];
+
+                if ( i === start ) n = 0;
+
+                if ( i > start && i < end && n < diff ) {
+                // if ( i % video.videoWidth > minLandmark.x && Math.floor( i / video.videoWidth ) > minLandmark.y
+                //     && i % video.videoWidth < maxLandMark.x && Math.floor( i / video.videoWidth ) < maxLandMark.y ) {
+
+                    // imageData[j + 0] = legendColor[0] * imageData[j + 0];
+                    // imageData[j + 1] = legendColor[1] * imageData[j + 1];
+                    // imageData[j + 2] = legendColor[2] * imageData[j + 2];
+                    imageData[j + 3] = isBackground ? selfieOption.opacityBackground : selfieOption.opacityHand;
+                    // imageData[ j + 3 ] = 1;
+
+                } else {
+
+                    imageData[j + 3] = isBackground ? selfieOption.opacityBackground : selfieOption.opacityBody;
+                    // imageData[ j + 3 ] = legendColor[ 3 ] * imageData[ j + 3 ];
+
+                }
+
+                j += 4;
+                n = ( n + 1 ) % video.videoWidth;
+        
+            }
+
+            
             break;
 
         }
@@ -538,16 +604,20 @@ function pointingHandler( landmarks, handedness ) {
             // check same element
             let newElement = getElementatPosition( landmarks[ 8 ] );
 
-            if ( newElement.isSameNode( handAction[ handedness ].actionParam.currentElement ) &&
-                ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.readyDualTime ) ) {
+            if ( newElement ) {
 
-                handAction[ handedness ].actionState = "READY";
-                initReady( handedness, landmarks );
+                if ( newElement.isSameNode( handAction[ handedness ].actionParam.currentElement ) &&
+                    ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.readyDualTime ) ) {
 
-            } else {
+                    handAction[ handedness ].actionState = "READY";
+                    initReady( handedness, landmarks );
 
-                handAction[ handedness ].actionState = "HOVER";
-                hoverHandler( handedness, landmarks, newElement );
+                } else {
+
+                    handAction[ handedness ].actionState = "HOVER";
+                    hoverHandler( handedness, landmarks, newElement );
+
+                }
 
             }
             break;
@@ -628,9 +698,12 @@ function initHover( handedness, landmarks ) {
 
     newElement.dispatchEvent( new MouseEvent( 'mouseenter',
     {
+        target: newElement,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSet.x,
@@ -665,9 +738,12 @@ function initMouseDown( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousedown',
     {
+        target: handAction[ handedness ].actionParam.elementReady,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSet.x,
@@ -693,9 +769,12 @@ function exitHover( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
     {
+        target: handAction[ handedness ].actionParam.currentElement,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSetOld.x,
@@ -714,9 +793,12 @@ function exitReady( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mouseleave',
     {
+        target: handAction[ handedness ].actionParam.elementReady,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSetOld.x,
@@ -735,9 +817,12 @@ function exitMouseDown( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseup',
     {
+        target: handAction[ handedness ].actionParam.elementMD,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSetOld.x,
@@ -746,9 +831,12 @@ function exitMouseDown( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseleave',
     {
+        target: handAction[ handedness ].actionParam.elementMD,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSetOld.x,
@@ -778,9 +866,12 @@ function hoverHandler( handedness, landmarks, element ) {
 
         element.dispatchEvent( new MouseEvent( 'mousemove',
         {
+            target: element,
             view: window,
             bubbles: true,
             cancelable: true,
+            x: p.x,
+            y: p.y,
             clientX: p.x,
             clientY: p.y,
             offsetX: offSet.x,
@@ -792,9 +883,12 @@ function hoverHandler( handedness, landmarks, element ) {
         let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
         handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
         {
+            target: handAction[ handedness ].actionParam.currentElement,
             view: window,
             bubbles: true,
             cancelable: true,
+            x: p.x,
+            y: p.y,
             clientX: p.x,
             clientY: p.y,
             offsetX: offSetOld.x,
@@ -803,9 +897,12 @@ function hoverHandler( handedness, landmarks, element ) {
         
         element.dispatchEvent( new MouseEvent( 'mouseenter',
         {
+            target: element,
             view: window,
             bubbles: true,
             cancelable: true,
+            x: p.x,
+            y: p.y,
             clientX: p.x,
             clientY: p.y,
             offsetX: offSet.x,
@@ -833,9 +930,12 @@ function readyHandler( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousemove',
     {
+        target: handAction[ handedness ].actionParam.elementReady,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSet.x,
@@ -857,9 +957,42 @@ function clickHandler( handedness, landmarks ) {
     
     handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'click',
     {
+        target: handAction[ handedness ].actionParam.elementReady,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y,
+        detail: 1
+    } ) );
+
+    
+    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousedown',
+    {
+        target: handAction[ handedness ].actionParam.elementReady,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y
+    } ) );
+    
+    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mouseup',
+    {
+        target: handAction[ handedness ].actionParam.elementReady,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSet.x,
@@ -875,9 +1008,12 @@ function mouseDownHandler( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
     {
+        target: handAction[ handedness ].actionParam.elementMD,
         view: window,
         bubbles: true,
         cancelable: true,
+        x: p.x,
+        y: p.y,
         clientX: p.x,
         clientY: p.y,
         offsetX: offSet.x,
