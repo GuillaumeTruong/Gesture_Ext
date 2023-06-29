@@ -29,6 +29,9 @@ function injectedFunction(extensionId) {
 
   }
 }
+
+
+// injectedFunction( chrome.runtime.id );
   
 chrome.action.onClicked.addListener(function (tab) {
   if(!tab.id) {
