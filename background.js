@@ -32,14 +32,43 @@ function injectedFunction(extensionId) {
 
 
 // injectedFunction( chrome.runtime.id );
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.action.setBadgeText({
+    text: "OFF",
+  });
+  console.log( "chrome.runtime.onInstalled");
+});
+
   
-chrome.action.onClicked.addListener(function (tab) {
+// chrome.tabs.onUpdated.addListener(function (tab) {
+chrome.action.onClicked.addListener( async function (tab) {
+
   if(!tab.id) {
     console.log('No tab id');
     return;
   }
 
+  const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
+    // Next state will always be the opposite
+  const nextState = prevState === 'ON' ? 'OFF' : 'ON';
+  let stateExt = {
+    tabId: tab.id,
+    state: nextState,
+  };
+
+  chrome.storage.local.set({ stateExt: stateExt }).then(() => {
+    console.log("Storage stateExt : " + nextState);
+  });
+
+  // Set the action badge to the next state
+  await chrome.action.setBadgeText({
+    tabId: tab.id,
+    text: nextState,
+  });
+
   console.log('on click');
+  console.log("click sur tab : " + tab.id);
+
   chrome.scripting.executeScript({
     target: {
       tabId: tab.id,
@@ -48,5 +77,64 @@ chrome.action.onClicked.addListener(function (tab) {
     func: injectedFunction,
     args: [chrome.runtime.id]
   });
+
+  chrome.scripting.insertCSS({
+    files: ["gesture.css"],
+    target: { tabId: tab.id },
+  });
+
 });
-  
+
+
+chrome.tabs.onUpdated.addListener( async function ( tabID ) {
+
+  console.log( "chrome.tabs.onUpdated" );
+
+  chrome.storage.local.get( [ "stateExt" ] ).then( ( result ) => {
+
+    let isSameTab = true;
+    console.log( "Value currently is " + result.stateExt );
+
+    if( result.stateExt ) {
+
+      isSameTab &&= result.stateExt.state === 'ON';
+      isSameTab &&= tabID === result.stateExt.tabId;
+
+    } else {
+
+      isSameTab = false;
+
+    }
+
+    console.log( isSameTab );
+
+    if( isSameTab ) {
+      
+      chrome.action.setBadgeText({
+        tabId: tabID,
+        text: result.stateExt.state,
+      });
+      
+      chrome.scripting.executeScript({
+        target: {
+          tabId: tabID,
+        },
+        world: 'MAIN',
+        func: injectedFunction,
+        args: [chrome.runtime.id]
+      });
+      
+      chrome.scripting.insertCSS({
+        files: ["gesture.css"],
+        target: { tabId: tabID },
+      });
+
+    }
+
+  });
+
+
+});
+
+// chrome.tabs.onActivated.addListener(handleActivated);
+// chrome.tabs.onActivated.addListener(handleActivated);

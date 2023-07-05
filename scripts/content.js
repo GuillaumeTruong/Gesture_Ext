@@ -142,6 +142,13 @@ function initDocument() {
     extId = extId.getAttribute('data-runtime-id');
     console.log( extId );
 
+
+    // modify all <select> elements
+    let selectElements = document.querySelectorAll("select");
+    for (var i = 0; i < selectElements.length; i++) {
+        selectElements[i].classList.add("custom-select");
+    }
+
 }
 
 async function initMediapipe() {
@@ -350,174 +357,105 @@ function drawSelfie( resultSegmenter, resultsGesture, gesturesName ) {
 
         case "HANDS_UP" : {
 
-            // let maxLandMark = { xH1: 0, yH1: 0, xH2: 0, yH2: 0 };
-            // let minLandmark = { xH1: 1, yH1: 1, xH2: 1, yH2: 1 };
-            // let nHand = resultsGesture.handednesses.length;
-            // if ( nHand < 1 ) console.log( nHand );
-
-            // resultsGesture.landmarks[ 0 ].forEach( element => {
-    
-            //     maxLandMark.xH1 = Math.min( 1, Math.max( element.x * ( 1 + selfieOption.spaceAround ), maxLandMark.xH1 ) );
-            //     maxLandMark.yH1 = Math.min( 1, Math.max( element.y * ( 1 + selfieOption.spaceAround ), maxLandMark.yH1 ) );
-            //     minLandmark.xH1 = Math.max( 0, Math.min( element.x * ( 1 - selfieOption.spaceAround ), minLandmark.xH1 ) );
-            //     minLandmark.yH1 = Math.max( 0, Math.min( element.y * ( 1 - selfieOption.spaceAround ), minLandmark.yH1 ) );
-                
-            // });
-
-            // maxLandMark.xH1 = Math.floor( maxLandMark.xH1 * video.videoWidth );
-            // maxLandMark.yH1 = Math.floor( maxLandMark.yH1 * video.videoHeight );
-            // minLandmark.xH1 = Math.floor( minLandmark.xH1 * video.videoWidth );
-            // minLandmark.yH1 = Math.floor( minLandmark.yH1 * video.videoHeight );
-
-            // let startH1 = minLandmark.xH1 + minLandmark.yH1 * video.videoWidth;
-            // let endH1 = maxLandMark.xH1 + maxLandMark.yH1 * video.videoWidth;
-            // let diffH1 = maxLandMark.xH1 - minLandmark.xH1;
-            
-            // let startH2, endH2, diffH2;
-            // let nH1 = 0, nH2 = 0;
-
-            // if ( nHand === 2 ) {
-                
-            //     resultsGesture.landmarks[ 1 ].forEach( element => {
-        
-            //         maxLandMark.xH2 = Math.min( 1, Math.max( element.x * ( 1 + selfieOption.spaceAround ), maxLandMark.xH2 ) );
-            //         maxLandMark.yH2 = Math.min( 1, Math.max( element.y * ( 1 + selfieOption.spaceAround ), maxLandMark.yH2 ) );
-            //         minLandmark.xH2 = Math.max( 0, Math.min( element.x * ( 1 - selfieOption.spaceAround ), minLandmark.xH2 ) );
-            //         minLandmark.yH2 = Math.max( 0, Math.min( element.y * ( 1 - selfieOption.spaceAround ), minLandmark.yH2 ) );
-                    
-            //     });
-                
-            //     maxLandMark.xH2 = Math.floor( maxLandMark.xH2 * video.videoWidth );
-            //     maxLandMark.yH2 = Math.floor( maxLandMark.yH2 * video.videoHeight );
-            //     minLandmark.xH2 = Math.floor( minLandmark.xH2 * video.videoWidth );
-            //     minLandmark.yH2 = Math.floor( minLandmark.yH2 * video.videoHeight );
-                
-            //     startH2 = minLandmark.xH2 + minLandmark.yH2 * video.videoWidth;
-            //     endH2 = maxLandMark.xH2 + maxLandMark.yH2 * video.videoWidth;
-            //     diffH2 = maxLandMark.xH2 - minLandmark.xH2;
-
-            // }
-
-
-            // let listPoints = [];
-            
-            // for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
-
-            //     resultsGesture.landmarks[ h ].forEach( element => {
-
-            //         listPoints.push( {
-            //             x: Math.floor( element.x * video.videoWidth ),
-            //             y: Math.floor( element.y * video.videoHeight )
-            //         } );
-
-            //     } );
-
-            // }
-
-
-            let pMoy = {
-                x: 0,
-                y: 0,
-                n: 0
-            };
+            let distMax = [];
+            let distFade = [];
+            let pMoy = [];
             
             for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
 
+                pMoy.push( {
+                    x: 0,
+                    y: 0,
+                    n: 0
+                } );
+
                 resultsGesture.landmarks[ h ].forEach( element => {
 
-                    pMoy.x += Math.floor( element.x * video.videoWidth );
-                    pMoy.y += Math.floor( element.y * video.videoHeight );
-                    pMoy.n++;
+                    pMoy[ h ].x += Math.floor( element.x * video.videoWidth );
+                    pMoy[ h ].y += Math.floor( element.y * video.videoHeight );
+                    pMoy[ h ].n++;
 
                 } );
 
+                pMoy[ h ].x /= pMoy[ h ].n;
+                pMoy[ h ].y /= pMoy[ h ].n;
+
             }
-
-            pMoy.x /= pMoy.n;
-            pMoy.y /= pMoy.n;
-
-            console.log( pMoy );
             
+            for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
+
+                distMax.push( 0 );
+
+                resultsGesture.landmarks[ h ].forEach( element => {
+
+                    distMax[ h ] = Math.max(
+                        distMax[ h ],
+                        Math.sqrt(
+                            Math.pow( pMoy[ h ].x - Math.floor( element.x * video.videoWidth ), 2 )
+                            + Math.pow( pMoy[ h ].y - Math.floor( element.y * video.videoHeight ), 2 )
+                        )
+                    );
+
+                } );
+
+                distFade[ h ] = distMax[ h ] * 0.95;
+                distMax[ h ] *= 1.3;
+
+            }
             
             let j = 0;
             let isBody, dist, x, y;
 
             for (let i = 0; i < mask.length; ++i) {
 
-                // if ( i === startH1 ) nH1 = 0;
-                // if ( nHand === 2 && i === startH2 ) nH2 = 0;
-
                 if ( mask[ i ] === 0 ) {
 
-                    imageData[j + 3] = selfieOption.opacityBackground
+                    imageData[ j + 3 ] = selfieOption.opacityBackground
 
                 } else {
 
-                    // isBody = true;
-
-                    // isBody = listPoints.every( element => {
-                        
-                    //     let dist = Math.abs( element.x - ( i % video.videoWidth ) ) + Math.abs( element.y - Math.floor( i / video.videoWidth ) );
-                    //     return dist > 20;
-
-                    // } );
-
-                    // if ( isBody ) {
-
-                    //     imageData[j + 3] = lerp ( selfieOption.opacityIdle, selfieOption.opacityBody, fadeProgression );
-
-                    // } else {
-                        
-                    //     imageData[j + 3] = lerp ( selfieOption.opacityIdle, selfieOption.opacityHand, fadeProgression );
-
-                    // }
-
-
-                    // if ( i > startH1 && i < endH1 && nH1 < diffH1 ) {
-                        
-                    //     imageData[ j + 3 ] = lerp (
-                    //         selfieOption.opacityIdle,
-                    //         selfieOption.opacityHand,
-                    //         fadeProgression
-                    //     );
-
-                    // } else if ( nHand === 2 && i > startH2 && i < endH2 && nH2 < diffH2 ) {
-
-                    //     imageData[ j + 3 ] = lerp (
-                    //         selfieOption.opacityIdle,
-                    //         selfieOption.opacityHand,
-                    //         fadeProgression 
-                    //     );
-
-                    // } else {
-
-                    //     imageData[ j + 3 ] = lerp (
-                    //         selfieOption.opacityIdle,
-                    //         selfieOption.opacityBody,
-                    //         fadeProgression
-                    //     );
-
-                    // }
-
+                    isBody = true;
                     x = i % video.videoWidth;
                     y = Math.floor( i / video.videoWidth );
-                    dist = Math.sqrt( Math.pow( pMoy.x - x, 2 ) + Math.pow( pMoy.y - y, 2 ) );
+                    let d = 10000;
+                    let hNum = 0;
 
-                    if ( dist > 100 ) {
+                    for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
 
-                        imageData[j + 3] = lerp ( selfieOption.opacityIdle, selfieOption.opacityBody, fadeProgression );
+                        dist = Math.sqrt( Math.pow( pMoy[ h ].x - x, 2 ) + Math.pow( pMoy[ h ].y - y, 2 ) );
+                        isBody &&= ( dist > distMax[ h ] );
+                        if ( dist < distMax[ h ] && dist < d ) {
+                            hNum = h;
+                            d = dist;
+                        }
+
+                    }
+
+                    if ( isBody ) {
+
+                        imageData[ j + 3 ] = lerp (
+                            selfieOption.opacityIdle,
+                            selfieOption.opacityBody,
+                            fadeProgression
+                        );
 
                     } else {
                         
-                        imageData[j + 3] = lerp ( selfieOption.opacityIdle, selfieOption.opacityHand, fadeProgression );
+                        imageData[ j + 3 ] = lerp (
+                            selfieOption.opacityIdle,
+                            lerp (
+                                selfieOption.opacityHand,
+                                selfieOption.opacityBody,
+                                easeIn( Math.max( 0, ( d - distFade[ hNum ] ) / ( distMax[ hNum ] - distFade[ hNum ] ) ), 1 )
+                            ), 
+                            fadeProgression
+                        );
 
                     }
 
                 }
 
                 j += 4;
-                // if ( i < endH1 ) nH1 = ( nH1 + 1 ) % video.videoWidth;
-                // if ( nHand === 2 && i < endH2 ) nH2 = ( nH2 + 1 ) % video.videoWidth;
         
             }
 
