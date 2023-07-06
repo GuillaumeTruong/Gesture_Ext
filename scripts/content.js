@@ -4,6 +4,7 @@ let videoResolution = 720; // 720 // 1280 // 1920
 let video;
 let canvasElementSegmentation, canvasElement, canvasTmp;
 let canvasCtxSeg, canvasCtx, canvasTmpCtx;
+let currentKey = new Set();
 
 let gestureRecognizer, imageSegmenter;
 let drawing;
@@ -45,15 +46,17 @@ let handAction = {
 };
 
 let clickOption = {
+    state: "PUSH", // "PUSH" "PINCH" "KEYBOARD"
     readyDualTime: 1000,
     clickMaxTime: 500,
     clickMaxRange: 150,
-    clickTimeTolerance: 100,
+    clickTimeTolerance: 150,
     clickZRatio: 0.3
 };
 
 let mouseDownOption = {
-    mouseDownTimeTolerance: 200
+    mouseDownTimeTolerance: 400,
+    sliderXRatio: 0.1
 }
 
 let selfieState = "IDLE";
@@ -85,6 +88,7 @@ async function init() {
     
     console.log( 'Init Gesture' );
     initDocument();
+    initKeyboard();
     initMediapipe();
     initFingerPose();
     enableCam();
@@ -195,6 +199,29 @@ function initFingerPose() {
     gestureEstimator = new GestureEstimator( knownGestures );
 
 }
+
+function initKeyboard() {
+
+    document.body.onkeydown = function( e ) {
+
+        currentKey.add( e.code );
+
+    }
+
+    document.body.onkeyup = function(e) {
+
+        currentKey.delete( e.code );
+
+    }
+
+    window.addEventListener('keydown', function(e) {
+        if(e.code == "Space" && e.target == document.body) {
+          e.preventDefault();
+        }
+    });
+
+}
+
 
 async function enableCam() {
 
@@ -573,10 +600,21 @@ function noneHandler( landmarks, handedness ) {
 
         case "READY": {
 
-            if ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.clickTimeTolerance ) {
+            if ( clickCheck( handedness, landmarks ) ) {
 
-                handAction[ handedness ].actionState = "IDLE";
-                resetAction( handedness );
+                handAction[ handedness ].actionState = "HOVER";
+                clickHandler( handedness, landmarks );
+                exitReady( handedness, landmarks );
+                initHover( handedness, landmarks );
+
+            } else {
+
+                if ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.clickTimeTolerance ) {
+
+                    handAction[ handedness ].actionState = "IDLE";
+                    resetAction( handedness );
+
+                }
 
             }
             break;
@@ -631,8 +669,22 @@ function closedFistHandler( landmarks, handedness ) {
 
         case "READY": {
 
-            handAction[ handedness ].actionState = "MOUSEDOWN";
-            initMouseDown( handedness, landmarks );
+            if ( clickCheck( handedness, landmarks ) ) {
+
+                handAction[ handedness ].actionState = "HOVER";
+                clickHandler( handedness, landmarks );
+                exitReady( handedness, landmarks );
+                initHover( handedness, landmarks );
+
+            } else {
+
+                if ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.clickTimeTolerance ) {
+
+                    handAction[ handedness ].actionState = "MOUSEDOWN";
+                    initMouseDown( handedness, landmarks );
+
+                }
+            }
             break;
 
         };
@@ -693,7 +745,7 @@ function pointingHandler( landmarks, handedness ) {
 
         case "READY": {
 
-            if ( 1 - ( handAction[ handedness ].actionParam.readyP8.z / landmarks[ 8 ].z ) > clickOption.clickZRatio ) {
+            if ( clickCheck( handedness, landmarks ) ) {
 
                 handAction[ handedness ].actionState = "HOVER";
                 clickHandler( handedness, landmarks );
@@ -1134,6 +1186,22 @@ function mouseDownHandler( handedness, landmarks ) {
     p = landmarksToXYPixelDocument( p );
     let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
 
+    if (
+        handAction[ handedness ].actionParam.elementMD.tagName.toLowerCase() === "input"
+        && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
+    ) {
+
+        let diffP5 = handAction[ handedness ].actionParam.mdP5.x - landmarks[ 5 ].x;
+        let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
+        let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
+        let value = min + ( max - min )
+            * ( ( diffP5 - ( - mouseDownOption.sliderXRatio ) ) / ( mouseDownOption.sliderXRatio - ( - mouseDownOption.sliderXRatio ) ) );
+        value = Math.max( value, handAction[ handedness ].actionParam.elementMD.min );
+        value = Math.min( value, handAction[ handedness ].actionParam.elementMD.max );
+        handAction[ handedness ].actionParam.elementMD.value = value;
+
+    }
+
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
     {
         target: handAction[ handedness ].actionParam.elementMD,
@@ -1155,6 +1223,41 @@ function mouseDownHandler( handedness, landmarks ) {
 }
 
 
+
+
+function clickCheck( handedness, landmarks ) {
+
+    switch ( clickOption.state ) {
+
+        case "PUSH": {
+
+            return ( 1 - ( handAction[ handedness ].actionParam.readyP8.z / landmarks[ 8 ].z ) > clickOption.clickZRatio );
+
+        }
+
+        case "PINCH": {
+
+            let distP4P8 = distanceBetweenPoints3D( landmarks[ 4 ], landmarks[ 8 ] );
+            let distP0P17 = distanceBetweenPoints3D( landmarks[ 0 ], landmarks[ 17 ] );
+            console.log( "distP4P8" );
+            console.log( distP4P8 );
+            console.log( "distP0P17" );
+            console.log( distP0P17 );
+
+            return  distP4P8 < distP0P17 * 0.2;
+
+        }
+
+        case "KEYBOARD": {
+            
+            return currentKey.has( "Space" );
+
+        }
+
+    }
+    
+
+}
 
 function drawPointer( point, progression, handedness ) {
     
@@ -1287,6 +1390,12 @@ function getRelativeCoordinates( element, x, y ) {
 function distanceBetweenPoints( p1, p2 ) {
 
     return Math.sqrt( Math.pow( p2.x - p1.x, 2 ) + Math.pow( p2.y - p1.y, 2 ) );
+
+}
+
+function distanceBetweenPoints3D( p1, p2 ) {
+
+    return Math.sqrt( Math.pow( p2.x - p1.x, 2 ) + Math.pow( p2.y - p1.y, 2 ) + Math.pow( p2.z - p1.z, 2 ) );
 
 }
 
