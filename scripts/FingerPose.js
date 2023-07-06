@@ -657,7 +657,39 @@ for ( let finger of [ Finger.Middle, Finger.Ring, Finger.Pinky ] ) {
 
 }
 
+pointingGestureDescription.addCurl( Finger.Thumb, FingerCurl.FullCurl, 0.8 );
+pointingGestureDescription.addCurl( Finger.Thumb, FingerCurl.HalfCurl, 1.0 );
 pointingGestureDescription.addCurl( Finger.Index, FingerCurl.NoCurl, 1.0 );
+
+
+// - Pinch ☝️
+const pinchGestureDescription = new GestureDescription( 'Pinch' );
+
+for ( let finger of [ Finger.Middle, Finger.Ring, Finger.Pinky ] ) {
+
+  pinchGestureDescription.addCurl( finger, FingerCurl.FullCurl, 1.0 );
+  pinchGestureDescription.addCurl( finger, FingerCurl.HalfCurl, 0.7 );
+
+}
+
+
+// - Ready to Pinch ☝️
+const readyToPinchGestureDescription = new GestureDescription( 'ReadyToPinch' );
+
+for ( let finger of [ Finger.Middle, Finger.Ring, Finger.Pinky ] ) {
+
+  readyToPinchGestureDescription.addCurl( finger, FingerCurl.FullCurl, 1.0 );
+  readyToPinchGestureDescription.addCurl( finger, FingerCurl.HalfCurl, 0.7 );
+
+}
+
+readyToPinchGestureDescription.addCurl( Finger.Thumb, FingerCurl.NoCurl, 1.0 );
+readyToPinchGestureDescription.addCurl( Finger.Thumb, FingerCurl.HalfCurl, 0.8 );
+// readyToPinchGestureDescription.addDirection(Finger.Thumb, FingerDirection.HorizontalLeft, 1.0);
+// readyToPinchGestureDescription.addDirection(Finger.Thumb, FingerDirection.HorizontalLeft, 1.0);
+// readyToPinchGestureDescription.addDirection(Finger.Thumb, FingerDirection.HorizontalRight, 1.0);
+readyToPinchGestureDescription.addCurl( Finger.Index, FingerCurl.NoCurl, 0.7 );
+readyToPinchGestureDescription.addCurl( Finger.Index, FingerCurl.HalfCurl, 1.0 );
 
 
 // - Open Palm ✋
