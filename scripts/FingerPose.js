@@ -647,6 +647,7 @@ for( let finger of [ Finger.Index, Finger.Middle, Finger.Ring, Finger.Pinky ] ) 
 
 }
 
+
 // - Pointing ☝️
 const pointingGestureDescription = new GestureDescription( 'Pointing' );
 
@@ -657,9 +658,21 @@ for ( let finger of [ Finger.Middle, Finger.Ring, Finger.Pinky ] ) {
 
 }
 
-pointingGestureDescription.addCurl( Finger.Thumb, FingerCurl.FullCurl, 0.8 );
-pointingGestureDescription.addCurl( Finger.Thumb, FingerCurl.HalfCurl, 1.0 );
 pointingGestureDescription.addCurl( Finger.Index, FingerCurl.NoCurl, 1.0 );
+
+
+// - Pointing with thumb curl ☝️
+const pointingThumbGestureDescription = new GestureDescription( 'Pointing' );
+
+for ( let finger of [ Finger.Middle, Finger.Ring, Finger.Pinky ] ) {
+
+  pointingThumbGestureDescription.addCurl( finger, FingerCurl.FullCurl, 1.0 );
+  pointingThumbGestureDescription.addCurl( finger, FingerCurl.HalfCurl, 0.7 );
+
+}
+
+pointingThumbGestureDescription.addCurl( Finger.Thumb, FingerCurl.HalfCurl, 0.8 );
+pointingThumbGestureDescription.addCurl( Finger.Index, FingerCurl.NoCurl, 1.0 );
 
 
 // - Pinch ☝️

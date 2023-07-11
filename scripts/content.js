@@ -1,3 +1,5 @@
+let mode = "PINCH"; // "PUSH" "PINCH" "KEYBOARD"
+
 let extId;
 
 let videoResolution = 720; // 720 // 1280 // 1920
@@ -45,8 +47,8 @@ let handAction = {
     }
 };
 
+
 let clickOption = {
-    state: "PUSH", // "PUSH" "PINCH" "KEYBOARD"
     readyDualTime: 1000,
     clickMaxTime: 500,
     clickMaxRange: 150,
@@ -189,15 +191,45 @@ async function initMediapipe() {
 }
 
 function initFingerPose() {
-    
+
+    let knownGestures;
+
+    switch ( mode ) {
+
+        case "PUSH": {
+
+            knownGestures = [
+                closedFistGestureDescription,
+                pointingGestureDescription
+            ];
+            break;
+
+        }
+
+        case "PINCH": {
+
+            knownGestures = [
+                closedFistGestureDescription,
+                pointingThumbGestureDescription,
+                readyToPinchGestureDescription
+            ];
+            break;
+
+        }
+
+        case "KEYBOARD": {
+
+            knownGestures = [
+                closedFistGestureDescription,
+                pointingGestureDescription
+            ];
+            break;
+
+        }
+
+    }
+
     // FingerPose
-    const knownGestures = [
-        closedFistGestureDescription,
-        pointingGestureDescription,
-        readyToPinchGestureDescription
-        // pinchGestureDescription
-        // OpenPalmGestureDescription
-    ];
     gestureEstimator = new GestureEstimator( knownGestures );
 
 }
@@ -217,8 +249,28 @@ function initKeyboard() {
     }
 
     window.addEventListener('keydown', function(e) {
-        if(e.code == "Space" && e.target == document.body) {
-          e.preventDefault();
+        
+        switch ( mode ) {
+
+            case "PUSH":
+            case "PINCH": {
+
+                if( e.code == "Space" && e.target == document.body ) {
+                    e.preventDefault();
+                }
+                break;
+
+            }
+
+            case "KEYBOARD": {
+
+                if( e.code == "Space" ) {
+                    e.preventDefault();
+                }
+                break;
+
+            }
+
         }
     });
 
@@ -275,13 +327,38 @@ async function predictWebcam() {
 
     let gesturesName = [];
 
+    let actionHandlerFct;
+
+    switch ( mode ) {
+
+        case "PUSH": {
+
+            actionHandlerFct = actionHandler;
+            break;
+
+        }
+
+        case "PINCH": {
+
+            actionHandlerFct = actionHandlerPINCH;
+            break;
+
+        }
+
+        case "KEYBOARD": {
+
+            actionHandlerFct = actionHandlerKEYBOARD;
+            break;
+
+        }
+
+    }
+
     // Handle Action
     for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
 
         gesturesName.push(
-            // actionHandler(
-            actionHandlerPINCH(
-                // resultsGesture.gestures[ i ][ 0 ],
+            actionHandlerFct(
                 resultsGesture.landmarks[ i ],
                 resultsGesture.handednesses[ i ][ 0 ]
             )
@@ -1225,35 +1302,9 @@ function mouseDownHandler( handedness, landmarks ) {
 }
 
 
-
-
 function clickCheck( handedness, landmarks ) {
 
-    switch ( clickOption.state ) {
-
-        case "PUSH": {
-
-            return ( 1 - ( handAction[ handedness ].actionParam.readyP8.z / landmarks[ 8 ].z ) > clickOption.clickZRatio );
-
-        }
-
-        case "PINCH": {
-
-            let distP4P8 = distanceBetweenPoints3D( landmarks[ 4 ], landmarks[ 8 ] );
-            let distP0P17 = distanceBetweenPoints3D( landmarks[ 0 ], landmarks[ 17 ] );
-
-            return  distP4P8 < distP0P17 * 0.2;
-
-        }
-
-        case "KEYBOARD": {
-            
-            return currentKey.has( "Space" );
-
-        }
-
-    }
-    
+    return ( 1 - ( handAction[ handedness ].actionParam.readyP8.z / landmarks[ 8 ].z ) > clickOption.clickZRatio );
 
 }
 
@@ -1343,18 +1394,41 @@ function drawPointer( point, progression, handedness ) {
         case "MOUSEDOWN" : {
 
             canvasCtx.beginPath();
-            
-            point = {
-                x: handAction[ handedness ].actionParam.positionDiff.x + point.x,
-                y: handAction[ handedness ].actionParam.positionDiff.y + point.y,
-                z: handAction[ handedness ].actionParam.positionDiff.z + point.z
-            };
+
+            if (
+                handAction[ handedness ].actionParam.elementMD.tagName.toLowerCase() === "input"
+                && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
+            ) {
+
+                let box = handAction[ handedness ].actionParam.elementMD.getBoundingClientRect();
+                let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
+                let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
+                let value = parseInt( handAction[ handedness ].actionParam.elementMD.value );
+                let valueRatio =  ( value - min ) / ( max - min );
+
+                point = {
+                    x: video.width - ( box.x + box.width * valueRatio ),
+                    y: box.y + box.height * 0.5
+                };
+
+            } else {
+
+                point = {
+                    x: handAction[ handedness ].actionParam.positionDiff.x + point.x,
+                    y: handAction[ handedness ].actionParam.positionDiff.y + point.y,
+                    z: handAction[ handedness ].actionParam.positionDiff.z + point.z
+                };
+
+                point.x *= video.width;
+                point.y *= video.height;
+
+            }
     
             color = 'rgba( 11, 143, 31, 0.5 )';
             colorOutline = 'rgba( 0, 0, 0, 0.5 )';
             canvasCtx.arc(
-                ( point.x * video.width ),
-                ( point.y * video.height ),
+                point.x,
+                point.y,
                 radius,
                 0,
                 p
@@ -1476,6 +1550,47 @@ function showFPS() {
 
 }
 
+function findElementNearPosition( position, near ) {
+
+    let p = landmarksToXYPixelDocument( position );
+    let elemList = [];
+    let occurences = [];
+
+    for ( let x = Math.max( p.x - near, 1 ); x < Math.min( p.x + near, document.body.clientWidth - 1 ); x++ ) {
+        
+        for ( let y = Math.max( p.y - near, 1 );
+                y < Math.min( p.y + near, window.innerHeight - ( window.innerWidth - document.body.clientWidth ) - 1 ); y++ ) {
+
+            let elements = document.elementsFromPoint( x, y );
+
+            // remove the two canva (hand & segmenter) displayed in front
+            if ( elements[ 0 ] ) {
+        
+                if ( elements[ 0 ].id === "output_canvas" ) elements.shift();
+                if ( elements[ 0 ].id === "segmentation_canvas" ) elements.shift();
+        
+            }
+
+            if ( !elemList.includes( elements[ 0 ] ) ) {
+
+                elemList.push( elements[ 0 ] );
+                occurences.push( 1 );
+
+            } else {
+
+                elemList.indexOf( elements[ 0 ] );
+                occurences[ elemList.indexOf( elements[ 0 ] ) ] += 1;
+
+            }
+
+        }
+    
+    }
+
+    return elemList[ occurences.indexOf( Math.max( ...occurences ) ) ];
+
+}
+
 
 /*-------*
  * PINCH *
@@ -1483,7 +1598,6 @@ function showFPS() {
 
 
 function actionHandlerPINCH( landmarks, handednesses ) {
-
 
     // Gesture Estimator
     const est = gestureEstimator.estimate( landmarks, 9 );
@@ -1494,27 +1608,16 @@ function actionHandlerPINCH( landmarks, handednesses ) {
 
     if ( est.gestures.length > 0 ) {
 
-        // console.log( est.gestures );
-        // find gesture with highest match score
         gesture = est.gestures.reduce((p, c) => {
             return (p.score > c.score) ? p : c
         });
 
     }
-
     
     let distP4P8 = distanceBetweenPoints3D( landmarks[ 4 ], landmarks[ 8 ] );
     let distP0P17 = distanceBetweenPoints3D( landmarks[ 0 ], landmarks[ 17 ] );
 
     gesture = distP4P8 < distP0P17 * 0.2 ? "Pinch" : gesture.name;
-
-    console.log( gesture );
-
-
-    
-
-    // if ( handednesses.categoryName === "Left" )
-    //     console.log( handednesses.categoryName + " : " +handAction[ handednesses.categoryName ].actionState + " ; " + gesture.name );
 
     switch( gesture ) {
 
@@ -1700,11 +1803,7 @@ function pointingHandlerPINCH( landmarks, handedness, gesture ) {
 
 }
 
-
 function pinchHandlerPINCH( landmarks, handedness ) {
-
-    
-    console.log( handAction[ handedness ].actionState );
 
     switch ( handAction[ handedness ].actionState ) {
 
@@ -1736,7 +1835,6 @@ function pinchHandlerPINCH( landmarks, handedness ) {
     }
 
 }
-
 
 function hoverHandlerPINCH( handedness, landmarks, finger = 8 ) {
 
@@ -1843,15 +1941,15 @@ function exitHoverPINCH( handedness, landmarks ) {
 
 function initMDPinch( handedness, landmarks ) {
 
-    let p = {
+    let pmoy = {
         x: ( landmarks[ 8 ].x + landmarks[ 4 ].x ) /2,
         y: ( landmarks[ 8 ].y + landmarks[ 4 ].y ) /2,
         z: ( landmarks[ 8 ].z + landmarks[ 4 ].z ) /2,
     };
 
-    let element = findElementNearPosition( p, 8 );
+    let element = findElementNearPosition( pmoy, 8 );
 
-    console.log( element );
+    let p = landmarksToXYPixelDocument( pmoy );
 
     let offSet = getRelativeCoordinates( element, p.x, p.y );
 
@@ -1870,14 +1968,15 @@ function initMDPinch( handedness, landmarks ) {
     } ) );
 
     let positionDiff = {
-        x: p.x - landmarks[ 5 ].x,
-        y: p.y - landmarks[ 5 ].y,
-        z: p.z - landmarks[ 5 ].z
+        x: pmoy.x - landmarks[ 5 ].x,
+        y: pmoy.y - landmarks[ 5 ].y,
+        z: pmoy.z - landmarks[ 5 ].z
     }
 
     handAction[ handedness ].actionParam = {
-        firstP: p,
+        firstP: pmoy,
         positionDiff: positionDiff,
+        mdP4: landmarks[ 4 ],
         elementMD: element,
         timerMD: Date.now()
     };
@@ -1885,7 +1984,6 @@ function initMDPinch( handedness, landmarks ) {
 }
 
 function handlerMDPinch( handedness, landmarks ) {
-
 
     let p = {
         x: ( landmarks[ 8 ].x + landmarks[ 4 ].x ) /2,
@@ -1901,11 +1999,14 @@ function handlerMDPinch( handedness, landmarks ) {
         && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
     ) {
 
-        let diffP5 = handAction[ handedness ].actionParam.mdP5.x - landmarks[ 5 ].x;
+        let box = handAction[ handedness ].actionParam.elementMD.getBoundingClientRect();
+        let valueRatio = offSet.x / box.width;
+        valueRatio = Math.min( valueRatio, 1 );
+        valueRatio = Math.max( valueRatio, 0 );
+
         let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
         let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
-        let value = min + ( max - min )
-            * ( ( diffP5 - ( - mouseDownOption.sliderXRatio ) ) / ( mouseDownOption.sliderXRatio - ( - mouseDownOption.sliderXRatio ) ) );
+        let value = min + ( max - min ) * valueRatio;
         value = Math.max( value, handAction[ handedness ].actionParam.elementMD.min );
         value = Math.min( value, handAction[ handedness ].actionParam.elementMD.max );
         handAction[ handedness ].actionParam.elementMD.value = value;
@@ -1925,6 +2026,8 @@ function handlerMDPinch( handedness, landmarks ) {
         offsetX: offSet.x,
         offsetY: offSet.y
     } ) );
+
+    drawPointerPINCH( landmarks[ 4 ], handedness );
 
     handAction[ handedness ].actionParam.timerMD = Date.now();
 
@@ -1991,44 +2094,557 @@ function exitMDPinch( handedness, landmarks ) {
     
 }
 
+function drawPointerPINCH( point, handedness ) {
+    
+    let color, colorOutline;
+    let radius = 16;
+    let p = 2 * Math.PI;
 
-function findElementNearPosition( position, near ) {
+    switch ( handAction[ handedness ].actionState ) {
 
-    let p = landmarksToXYPixelDocument( position );
-    let elemList = [];
-    let occurences = [];
+        case "IDLE" : {
 
-    for ( let x = Math.max( p.x - near, 1 ); x < Math.min( p.x + near, document.body.clientWidth - 1 ); x++ ) {
-        
-        for ( let y = Math.max( p.y - near, 1 );
-                y < Math.min( p.y + near, window.innerHeight - ( window.innerWidth - document.body.clientWidth ) - 1 ); y++ ) {
+            break;
 
-            let elements = document.elementsFromPoint( x, y );
+        }
 
-            // remove the two canva (hand & segmenter) displayed in front
-            if ( elements[ 0 ] ) {
-        
-                if ( elements[ 0 ].id === "output_canvas" ) elements.shift();
-                if ( elements[ 0 ].id === "segmentation_canvas" ) elements.shift();
-        
-            }
+        case "MOUSEDOWN" : {
 
-            if ( !elemList.includes( elements[ 0 ] ) ) {
+            canvasCtx.beginPath();
 
-                elemList.push( elements[ 0 ] );
-                occurences.push( 1 );
+            if (
+                handAction[ handedness ].actionParam.elementMD.tagName.toLowerCase() === "input"
+                && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
+            ) {
+
+                let box = handAction[ handedness ].actionParam.elementMD.getBoundingClientRect();
+                let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
+                let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
+                let value = parseInt( handAction[ handedness ].actionParam.elementMD.value );
+                let valueRatio =  ( value - min ) / ( max - min );
+
+                point = {
+                    x: video.width - ( box.x + box.width * valueRatio ),
+                    y: box.y + box.height * 0.5
+                };
 
             } else {
 
-                elemList.indexOf( elements[ 0 ] );
-                occurences[ elemList.indexOf( elements[ 0 ] ) ] += 1;
+                point = {
+                    x: point.x,
+                    y: point.y,
+                    z: point.z
+                };
+
+                point.x *= video.width;
+                point.y *= video.height;
 
             }
+    
+            color = 'rgba( 11, 143, 31, 0.5 )';
+            colorOutline = 'rgba( 0, 0, 0, 0.5 )';
+            canvasCtx.arc(
+                point.x,
+                point.y,
+                radius,
+                0,
+                p
+            );
+            
+            canvasCtx.closePath();
+            canvasCtx.fillStyle = color;
+            canvasCtx.fill();
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = colorOutline;
+            canvasCtx.stroke();
+            break;
 
         }
-    
+
     }
 
-    return elemList[ occurences.indexOf( Math.max( ...occurences ) ) ];
+}
+
+
+/*----------*
+ * KEYBOARD *
+ *----------*/
+
+
+function actionHandlerKEYBOARD( landmarks, handednesses ) {
+
+    // Gesture Estimator
+    const est = gestureEstimator.estimate( landmarks, 9 );
+
+    let gesture = {
+        name: "None"
+    }
+
+    if ( est.gestures.length > 0 ) {
+
+        gesture = est.gestures.reduce((p, c) => {
+            return (p.score > c.score) ? p : c
+        });
+
+    }
+
+    switch( gesture.name ) {
+
+        case "Closed_Fist": {
+
+            closedFistHandlerKEYBOARD( landmarks, handednesses.categoryName );
+            break;
+
+        }
+
+        case "Pointing": {
+
+            pointingHandlerKEYBOARD( landmarks, handednesses.categoryName, gesture );
+            break;
+            
+        }
+
+        case "None": {
+
+            noneHandlerKEYBOARD( landmarks, handednesses.categoryName );
+            break;
+            
+        }
+
+    }
+
+    return gesture.name;
+
+}
+
+function noneHandlerKEYBOARD( landmarks, handedness ) {
+
+    switch ( handAction[ handedness ].actionState ) {
+
+        case "IDLE": {
+            
+            exitHoverKEYBOARD( handedness, landmarks );
+            handAction[ handedness ].actionState = "IDLE";
+            resetAction( handedness );
+            break;
+
+        };
+        
+        case "SCROLL": {
+
+            handAction[ handedness ].actionState = "IDLE";
+            resetAction( handedness );
+            break;
+
+        };
+        
+        case "MOUSEDOWN": {
+
+            if ( Date.now() - handAction[ handedness ].actionParam.timerMD > mouseDownOption.mouseDownTimeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                exitMDKEYBOARD( handedness, landmarks );
+                resetAction( handedness );
+
+            }
+            break;
+
+        };
+
+    }
+
+}
+
+function closedFistHandlerKEYBOARD( landmarks, handedness ) {
+
+    switch ( handAction[ handedness ].actionState ) {
+
+        case "IDLE": {
+
+            exitHoverKEYBOARD( handedness, landmarks );
+            handAction[ handedness ].actionState = "SCROLL";
+            initScroll( handedness, landmarks );
+            break;
+
+        };
+        
+        case "SCROLL": {
+
+            handAction[ handedness ].actionState = "SCROLL";
+            scrollHandler( handedness, landmarks );
+            break;
+
+        };
+
+        case "MOUSEDOWN": {
+
+            if ( Date.now() - handAction[ handedness ].actionParam.timerMD > mouseDownOption.mouseDownTimeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                exitMDKEYBOARD( handedness, landmarks );
+                resetAction( handedness );
+
+            }
+            break;
+
+        };
+
+    }
+
+}
+
+function pointingHandlerKEYBOARD( landmarks, handedness ) {
+
+    switch ( handAction[ handedness ].actionState ) {
+
+        case "IDLE": {
+
+            if ( currentKey.has( "Space" ) ) {
+
+                handAction[ handedness ].actionState = "MOUSEDOWN";
+                initMDKEYBOARD( handedness, landmarks );
+
+            } else {
+
+                handAction[ handedness ].actionState = "IDLE";
+                hoverHandlerKEYBOARD( handedness, landmarks );
+
+            }
+            break;
+
+        };
+        
+        case "SCROLL": {
+
+            handAction[ handedness ].actionState = "IDLE";
+            resetAction( handedness );
+            break;
+
+        };
+
+        case "MOUSEDOWN": {
+
+            if ( !currentKey.has( "Space" ) ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                exitMDKEYBOARD( handedness, landmarks );
+                resetAction( handedness );
+
+            } else {
+
+                handAction[ handedness ].actionState = "MOUSEDOWN";
+                handlerMDKEYBOARD( handedness, landmarks );
+
+            }
+            break;
+
+        };
+
+    }
+
+}
+
+
+function hoverHandlerKEYBOARD( handedness, landmarks ) {
+
+    let element = getElementatPosition( landmarks[ 8 ] );
+
+    let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
+
+    let offSet = getRelativeCoordinates( element, p.x, p.y );
+
+    if (
+        handAction[ handedness ].actionParam.currentElement
+        && element.isSameNode( handAction[ handedness ].actionParam.currentElement )
+    ) {
+
+        element.dispatchEvent( new MouseEvent( 'mousemove',
+        {
+            target: element,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        } ) );
+
+    } else {
+        
+        if ( handAction[ handedness ].actionParam.currentElement ) {
+
+            let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
+            handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
+            {
+                target: handAction[ handedness ].actionParam.currentElement,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSetOld.x,
+                offsetY: offSetOld.y
+            } ) );
+
+        }
+        
+        element.dispatchEvent( new MouseEvent( 'mouseenter',
+        {
+            target: element,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        } ) );
+        
+        document.activeElement.blur();
+        element.focus();
+
+        handAction[ handedness ].actionParam.currentElement = element;
+        handAction[ handedness ].actionParam.timerReady = Date.now();
+
+    }
+    
+    // let progression = ( Date.now() - handAction[ handedness ].actionParam.timerReady ) / clickOption.readyDualTime;
+    // drawPointer( landmarks[ 8 ], progression, handedness );
+
+}
+
+function exitHoverKEYBOARD( handedness, landmarks ) {
+    
+    if ( handAction[ handedness ].actionParam.currentElement ) {
+    
+        let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
+
+        let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
+
+        handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
+        {
+            target: handAction[ handedness ].actionParam.currentElement,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSetOld.x,
+            offsetY: offSetOld.y
+        } ) );
+
+        document.activeElement.blur();
+
+    }
+
+};
+
+function initMDKEYBOARD( handedness, landmarks ) {
+
+    let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
+
+    let element = getElementatPosition( landmarks[ 8 ], false );
+    let offSet = getRelativeCoordinates( element, p.x, p.y );
+
+    element.dispatchEvent( new MouseEvent( 'mousedown',
+    {
+        target: element,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y
+    } ) );
+
+    handAction[ handedness ].actionParam = {
+        firstP: landmarks[ 8 ],
+        mdP8: landmarks[ 8 ],
+        elementMD: element,
+        timerMD: Date.now()
+    };
+
+}
+
+function handlerMDKEYBOARD( handedness, landmarks ) {
+
+    let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
+
+    let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
+
+    if (
+        handAction[ handedness ].actionParam.elementMD.tagName.toLowerCase() === "input"
+        && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
+    ) {
+
+        let box = handAction[ handedness ].actionParam.elementMD.getBoundingClientRect();
+        let valueRatio = offSet.x / box.width;
+        valueRatio = Math.min( valueRatio, 1 );
+        valueRatio = Math.max( valueRatio, 0 );
+
+        let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
+        let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
+        let value = min + ( max - min ) * valueRatio;
+        value = Math.max( value, handAction[ handedness ].actionParam.elementMD.min );
+        value = Math.min( value, handAction[ handedness ].actionParam.elementMD.max );
+        handAction[ handedness ].actionParam.elementMD.value = value;
+
+    }
+
+    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
+    {
+        target: handAction[ handedness ].actionParam.elementMD,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y
+    } ) );
+
+    drawPointerKEYBOARD( landmarks[ 8 ], handedness );
+
+    handAction[ handedness ].actionParam.timerMD = Date.now();
+
+}
+
+function exitMDKEYBOARD( handedness, landmarks ) {
+
+    let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
+
+    let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
+
+    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseup',
+    {
+        target: handAction[ handedness ].actionParam.elementMD,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y
+    } ) );
+
+    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseleave',
+    {
+        target: handAction[ handedness ].actionParam.elementMD,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y
+    } ) );
+
+    console.log( "Click!" );
+
+    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'click',
+    {
+        target: handAction[ handedness ].actionParam.elementMD,
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        x: p.x,
+        y: p.y,
+        clientX: p.x,
+        clientY: p.y,
+        offsetX: offSet.x,
+        offsetY: offSet.y,
+        detail: 1
+    } ) );
+
+    document.activeElement.blur();
+    
+}
+
+function drawPointerKEYBOARD( point, handedness ) {
+    
+    let color, colorOutline;
+    let radius = 16;
+    let p = 2 * Math.PI;
+
+    switch ( handAction[ handedness ].actionState ) {
+
+        case "IDLE" : {
+
+            break;
+
+        }
+
+        case "MOUSEDOWN" : {
+
+            canvasCtx.beginPath();
+
+            if (
+                handAction[ handedness ].actionParam.elementMD.tagName.toLowerCase() === "input"
+                && handAction[ handedness ].actionParam.elementMD.type.toLowerCase()  === "range"
+            ) {
+
+                let box = handAction[ handedness ].actionParam.elementMD.getBoundingClientRect();
+                let min = parseInt( handAction[ handedness ].actionParam.elementMD.min );
+                let max = parseInt( handAction[ handedness ].actionParam.elementMD.max );
+                let value = parseInt( handAction[ handedness ].actionParam.elementMD.value );
+                let valueRatio =  ( value - min ) / ( max - min );
+
+                point = {
+                    x: video.width - ( box.x + box.width * valueRatio ),
+                    y: box.y + box.height * 0.5
+                };
+
+            } else {
+
+                point = {
+                    x: point.x,
+                    y: point.y,
+                    z: point.z
+                };
+
+                point.x *= video.width;
+                point.y *= video.height;
+
+            }
+    
+            color = 'rgba( 11, 143, 31, 0.5 )';
+            colorOutline = 'rgba( 0, 0, 0, 0.5 )';
+            canvasCtx.arc(
+                point.x,
+                point.y,
+                radius,
+                0,
+                p
+            );
+            
+            canvasCtx.closePath();
+            canvasCtx.fillStyle = color;
+            canvasCtx.fill();
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = colorOutline;
+            canvasCtx.stroke();
+            break;
+
+        }
+
+    }
 
 }
