@@ -83,6 +83,11 @@ let fps = {
     img: 0
 };
 
+let cameraMode = {
+    state: "FULL", // "FULL" "WINDOW"
+    timer: null,
+    fadeTime: 1500
+}
 
 init();
 
@@ -103,6 +108,7 @@ function initDocument() {
 
     let camContainer = document.createElement('div');
     camContainer.style = "position: fixed; left: 0px; top: 0px; z-index: 2147483647;";
+    camContainer.className  = "cam_container";
     document.body.appendChild( camContainer );
     
     video = document.createElement( 'video' );
@@ -117,7 +123,7 @@ function initDocument() {
     
     canvasElementSegmentation = document.createElement( 'canvas' );
     canvasElementSegmentation.id = "segmentation_canvas";
-    canvasElementSegmentation.class = "segmentation_canvas";
+    canvasElementSegmentation.className  = "segmentation_canvas";
     canvasElementSegmentation.width  = 1280;
     canvasElementSegmentation.height = 720;
     canvasElementSegmentation.style = "position: absolute; left: 0px; top: 0px; transform: scaleX(-1); pointer-events: none;"
@@ -126,7 +132,7 @@ function initDocument() {
     
     canvasElement = document.createElement( 'canvas' );
     canvasElement.id = "output_canvas";
-    canvasElement.class = "output_canvas";
+    canvasElement.className  = "output_canvas";
     canvasElement.width  = 1280;
     canvasElement.height = 720;
     canvasElement.style = "position: absolute; left: 0px; top: 0px; transform: scaleX(-1); pointer-events: none;"
@@ -136,7 +142,7 @@ function initDocument() {
     
     canvasTmp = document.createElement( 'canvas' );
     canvasTmp.id = "tmp_canvas";
-    canvasTmp.class = "tmp_canvas";
+    canvasTmp.className  = "tmp_canvas";
     canvasTmp.width  = 1280;
     canvasTmp.height = 720;
     canvasTmp.style = "position: absolute; left: 0px; top: 0px; transform: scaleX(-1); pointer-events: none; display: none;"
@@ -153,6 +159,27 @@ function initDocument() {
     let selectElements = document.querySelectorAll("select");
     for (var i = 0; i < selectElements.length; i++) {
         selectElements[i].classList.add("custom-select");
+    }
+
+}
+
+function initCameraMode() {
+    
+    if ( cameraMode.state === "FULL" ) {
+
+        canvasElementSegmentation.style.transform = 'scaleX(-1)';
+        canvasElement.style.transform = 'scaleX(-1)';
+
+    } else {
+        
+        let windowScale = 0.2;
+        let translationY = Math.round( window.innerHeight - ( ( video.height +  video.height * windowScale ) / 2 ) );
+        let translationX = Math.round( window.innerWidth - ( ( video.width +  video.width * windowScale ) / 2 ) );
+        canvasElementSegmentation.style.transform = 'translate( ' + translationX + 'px, '
+            + translationY + 'px ) scale( -0.2, 0.2 )';
+        canvasElement.style.transform = 'translate( ' + translationX + 'px, '
+            + translationY + 'px ) scale( -0.2, 0.2 )';
+
     }
 
 }
@@ -244,6 +271,13 @@ function initKeyboard() {
 
     document.body.onkeyup = function(e) {
 
+        if ( ( e.code === "AltLeft" && currentKey.has( "KeyS" ) )
+            || ( currentKey.has( "AltLeft" ) && e.code === "KeyS" ) ) {
+
+            switchCameraMode();
+
+        }
+
         currentKey.delete( e.code );
 
     }
@@ -272,6 +306,7 @@ function initKeyboard() {
             }
 
         }
+
     });
 
 }
@@ -312,78 +347,82 @@ function startStream( stream, stream_settings ) {
     video.srcObject = stream;
     video.addEventListener("loadeddata", predictWebcam);
 
+    initCameraMode();
+
 }
 
 async function predictWebcam() {
+
+    let gesturesName = [];
 
     // Hand
     let nowInMs = Date.now();
     const resultsGesture = gestureRecognizer.recognizeForVideo( video, nowInMs );
   
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    drawHands( resultsGesture );
-    canvasCtx.restore();
+    if ( cameraMode.state === "FULL" ) {
 
-    let gesturesName = [];
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        drawHands( resultsGesture );
+        canvasCtx.restore();
 
-    let actionHandlerFct;
+        let actionHandlerFct;
 
-    switch ( mode ) {
+        switch ( mode ) {
 
-        case "PUSH": {
+            case "PUSH": {
 
-            actionHandlerFct = actionHandler;
-            break;
+                actionHandlerFct = actionHandler;
+                break;
+
+            }
+
+            case "PINCH": {
+
+                actionHandlerFct = actionHandlerPINCH;
+                break;
+
+            }
+
+            case "KEYBOARD": {
+
+                actionHandlerFct = actionHandlerKEYBOARD;
+                break;
+
+            }
 
         }
 
-        case "PINCH": {
+        // Handle Action
+        for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
 
-            actionHandlerFct = actionHandlerPINCH;
-            break;
+            gesturesName.push(
+                actionHandlerFct(
+                    resultsGesture.landmarks[ i ],
+                    resultsGesture.handednesses[ i ][ 0 ]
+                )
+            );
 
         }
 
-        case "KEYBOARD": {
 
-            actionHandlerFct = actionHandlerKEYBOARD;
-            break;
+        if ( selfieOption.enable ) {
+
+            let oldState = selfieState;
+
+            selfieState = false;
+
+            gesturesName.forEach( gName => {
+                selfieState ||= gName === "Pointing" || gName === "Closed_Fist" || gName === "ReadyToPinch" || gName === "Pinch";
+            } )
+
+            selfieState = selfieState ? "HANDS_UP" : "IDLE";
+
+            if ( oldState !== selfieState ) selfieOption.timer = Date.now();
 
         }
 
     }
-
-    // Handle Action
-    for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
-
-        gesturesName.push(
-            actionHandlerFct(
-                resultsGesture.landmarks[ i ],
-                resultsGesture.handednesses[ i ][ 0 ]
-            )
-        );
-
-    }
-
-    // selfieState = "IDLE";
-
-    if ( selfieOption.enable ) {
-
-        let oldState = selfieState;
-
-        selfieState = false
-
-        gesturesName.forEach( gName => {
-            selfieState ||= gName === "Pointing" || gName === "Closed_Fist";
-        } )
-
-        selfieState = selfieState ? "HANDS_UP" : "IDLE";
-
-        if ( oldState !== selfieState ) selfieOption.timer = Date.now();
-
-    }
-    // selfieState = ( selfieOption.enable && resultsGesture.handednesses.length > 0 ) ? "HANDS_UP" : "IDLE";
 
     // Selfie Segmenter
     imageSegmenter.segmentForVideo(
@@ -434,6 +473,7 @@ function drawSelfie( resultSegmenter, resultsGesture, gesturesName ) {
     
     canvasTmpCtx.clearRect(0, 0, canvasTmp.width, canvasTmp.height);
     canvasTmpCtx.drawImage( video, 0, 0, video.videoWidth, video.videoHeight );
+
     let imageData = canvasTmpCtx.getImageData(
         0,
         0,
@@ -441,133 +481,170 @@ function drawSelfie( resultSegmenter, resultsGesture, gesturesName ) {
         video.videoHeight
     ).data;
 
-    const mask = resultSegmenter.categoryMask.getAsFloat32Array();
-
-    let fadeProgression = ( Date.now() - selfieOption.timer ) / selfieOption.fadeTime;
-    fadeProgression = Math.min ( fadeProgression, 1 );
-
-    switch ( selfieState ) {
-
-        case "IDLE" : {
-
-            let j = 0;
-            for ( let i = 0; i < mask.length; ++i ) {
+    let cModeFadeProgression = ( Date.now() - cameraMode.timer ) / cameraMode.fadeTime;
     
-                imageData[ j + 3 ] = ( mask[ i ] === 0 ) ? selfieOption.opacityBackground
-                    : lerp ( selfieOption.opacityBody, selfieOption.opacityIdle, fadeProgression );
-                j += 4;
+    if ( cameraMode.state === "FULL" || cModeFadeProgression < 1 ) {
+
+        const mask = resultSegmenter.categoryMask.getAsFloat32Array();
+
+        let fadeProgression = ( Date.now() - selfieOption.timer ) / selfieOption.fadeTime;
+        fadeProgression = Math.min ( fadeProgression, 1 );
+
+        switch ( selfieState ) {
+
+            case "IDLE" : {
+
+                let j = 0;
+                for ( let i = 0; i < mask.length; ++i ) {
         
-            }
-            break;
-
-        }
-
-        case "HANDS_UP" : {
-
-            let distMax = [];
-            let distFade = [];
-            let pMoy = [];
+                    imageData[ j + 3 ] = ( mask[ i ] === 0 ) ? selfieOption.opacityBackground
+                        : lerp ( selfieOption.opacityBody, selfieOption.opacityIdle, fadeProgression );
+                    j += 4;
             
-            for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
-
-                pMoy.push( {
-                    x: 0,
-                    y: 0,
-                    n: 0
-                } );
-
-                resultsGesture.landmarks[ h ].forEach( element => {
-
-                    pMoy[ h ].x += Math.floor( element.x * video.videoWidth );
-                    pMoy[ h ].y += Math.floor( element.y * video.videoHeight );
-                    pMoy[ h ].n++;
-
-                } );
-
-                pMoy[ h ].x /= pMoy[ h ].n;
-                pMoy[ h ].y /= pMoy[ h ].n;
+                }
+                break;
 
             }
-            
-            for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
 
-                distMax.push( 0 );
+            case "HANDS_UP" : {
 
-                resultsGesture.landmarks[ h ].forEach( element => {
+                let distMax = [];
+                let distFade = [];
+                let pMoy = [];
+                
+                for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
 
-                    distMax[ h ] = Math.max(
-                        distMax[ h ],
-                        Math.sqrt(
-                            Math.pow( pMoy[ h ].x - Math.floor( element.x * video.videoWidth ), 2 )
-                            + Math.pow( pMoy[ h ].y - Math.floor( element.y * video.videoHeight ), 2 )
-                        )
-                    );
+                    pMoy.push( {
+                        x: 0,
+                        y: 0,
+                        n: 0
+                    } );
 
-                } );
+                    resultsGesture.landmarks[ h ].forEach( element => {
 
-                distFade[ h ] = distMax[ h ] * 0.95;
-                distMax[ h ] *= 1.3;
+                        pMoy[ h ].x += Math.floor( element.x * video.videoWidth );
+                        pMoy[ h ].y += Math.floor( element.y * video.videoHeight );
+                        pMoy[ h ].n++;
 
-            }
-            
-            let j = 0;
-            let isBody, dist, x, y;
+                    } );
 
-            for (let i = 0; i < mask.length; ++i) {
+                    pMoy[ h ].x /= pMoy[ h ].n;
+                    pMoy[ h ].y /= pMoy[ h ].n;
 
-                if ( mask[ i ] === 0 ) {
+                }
+                
+                for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
 
-                    imageData[ j + 3 ] = selfieOption.opacityBackground
+                    distMax.push( 0 );
 
-                } else {
+                    resultsGesture.landmarks[ h ].forEach( element => {
 
-                    isBody = true;
-                    x = i % video.videoWidth;
-                    y = Math.floor( i / video.videoWidth );
-                    let d = 10000;
-                    let hNum = 0;
+                        distMax[ h ] = Math.max(
+                            distMax[ h ],
+                            Math.sqrt(
+                                Math.pow( pMoy[ h ].x - Math.floor( element.x * video.videoWidth ), 2 )
+                                + Math.pow( pMoy[ h ].y - Math.floor( element.y * video.videoHeight ), 2 )
+                            )
+                        );
 
-                    for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
+                    } );
 
-                        dist = Math.sqrt( Math.pow( pMoy[ h ].x - x, 2 ) + Math.pow( pMoy[ h ].y - y, 2 ) );
-                        isBody &&= ( dist > distMax[ h ] );
-                        if ( dist < distMax[ h ] && dist < d ) {
-                            hNum = h;
-                            d = dist;
+                    distFade[ h ] = distMax[ h ] * 0.95;
+                    distMax[ h ] *= 1.3;
+
+                }
+                
+                let j = 0;
+                let isBody, dist, x, y;
+
+                for (let i = 0; i < mask.length; ++i) {
+
+                    if ( mask[ i ] === 0 ) {
+
+                        imageData[ j + 3 ] = selfieOption.opacityBackground
+
+                    } else {
+
+                        isBody = true;
+                        x = i % video.videoWidth;
+                        y = Math.floor( i / video.videoWidth );
+                        let d = 10000;
+                        let hNum = 0;
+
+                        for ( let h = 0; h < resultsGesture.landmarks.length; h++ ) {
+
+                            dist = Math.sqrt( Math.pow( pMoy[ h ].x - x, 2 ) + Math.pow( pMoy[ h ].y - y, 2 ) );
+                            isBody &&= ( dist > distMax[ h ] );
+                            if ( dist < distMax[ h ] && dist < d ) {
+                                hNum = h;
+                                d = dist;
+                            }
+
+                        }
+
+                        if ( isBody ) {
+
+                            imageData[ j + 3 ] = lerp (
+                                selfieOption.opacityIdle,
+                                selfieOption.opacityBody,
+                                fadeProgression
+                            );
+
+                        } else {
+                            
+                            imageData[ j + 3 ] = lerp (
+                                selfieOption.opacityIdle,
+                                lerp (
+                                    selfieOption.opacityHand,
+                                    selfieOption.opacityBody,
+                                    easeIn( Math.max( 0, ( d - distFade[ hNum ] ) / ( distMax[ hNum ] - distFade[ hNum ] ) ), 1 )
+                                ), 
+                                fadeProgression
+                            );
+
                         }
 
                     }
 
-                    if ( isBody ) {
-
-                        imageData[ j + 3 ] = lerp (
-                            selfieOption.opacityIdle,
-                            selfieOption.opacityBody,
-                            fadeProgression
-                        );
-
-                    } else {
-                        
-                        imageData[ j + 3 ] = lerp (
-                            selfieOption.opacityIdle,
-                            lerp (
-                                selfieOption.opacityHand,
-                                selfieOption.opacityBody,
-                                easeIn( Math.max( 0, ( d - distFade[ hNum ] ) / ( distMax[ hNum ] - distFade[ hNum ] ) ), 1 )
-                            ), 
-                            fadeProgression
-                        );
-
-                    }
-
+                    j += 4;
+            
                 }
 
+                
+                break;
+
+            }
+
+        }
+
+        
+        if ( cameraMode.state === "WINDOW" ) {
+
+            let j = 0;
+            for ( let i = 0; i < mask.length; ++i ) {
+    
+                imageData[ j + 3 ] = lerp (
+                    imageData[ j + 3 ],
+                    255,
+                    cModeFadeProgression
+                );
                 j += 4;
         
             }
 
-            
-            break;
+        } else if ( cModeFadeProgression < 1 ) {
+
+            let j = 0;
+            for ( let i = 0; i < mask.length; ++i ) {
+    
+                imageData[ j + 3 ] = lerp (
+                    255,
+                    imageData[ j + 3 ],
+                    cModeFadeProgression
+                );
+                j += 4;
+        
+            }
 
         }
 
@@ -595,7 +672,14 @@ function drawSelfie( resultSegmenter, resultsGesture, gesturesName ) {
     // canvasCtxSeg.putImageData(dataNew, 0, 0, 0, 0, video.width, video.height );
 
 }
-  
+
+
+
+/*------*
+ * PUSH *
+ *------*/
+
+
 function actionHandler( landmarks, handednesses ) {
 
 
@@ -968,7 +1052,6 @@ function initMouseDown( handedness, landmarks ) {
 }
 
 
-
 function exitHover( handedness, landmarks ) {
     
     let p = landmarksToXYPixelDocument( landmarks[ 8 ] );
@@ -1060,7 +1143,6 @@ function exitMouseDown( handedness, landmarks ) {
     document.activeElement.blur();
 
 };
-
 
 
 function scrollHandler( handedness, landmarks ) {
@@ -1652,7 +1734,7 @@ function actionHandlerPINCH( landmarks, handednesses ) {
 
     }
 
-    return gesture.name;
+    return gesture;
 
 }
 
@@ -2072,8 +2154,6 @@ function exitMDPinch( handedness, landmarks ) {
         offsetX: offSet.x,
         offsetY: offSet.y
     } ) );
-
-    console.log( "Click!" );
     
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'click',
     {
@@ -2213,7 +2293,7 @@ function actionHandlerKEYBOARD( landmarks, handednesses ) {
 
     }
 
-    return gesture.name;
+    return gesture;
 
 }
 
@@ -2644,6 +2724,35 @@ function drawPointerKEYBOARD( point, handedness ) {
             break;
 
         }
+
+    }
+
+}
+
+
+function switchCameraMode() {
+
+    if ( cameraMode.state === "FULL" ) {
+
+        let windowScale = 0.2;
+        cameraMode.state = "WINDOW";
+        let translationY = Math.round( window.innerHeight - ( ( video.height +  video.height * windowScale ) / 2 ) );
+        let translationX = Math.round( window.innerWidth - ( ( video.width +  video.width * windowScale ) / 2 ) );
+        canvasElementSegmentation.style.transform = 'translate( ' + translationX + 'px, '
+            + translationY + 'px ) scale( -0.2, 0.2 )';
+        canvasElement.style.transform = 'translate( ' + translationX + 'px, '
+            + translationY + 'px ) scale( -0.2, 0.2 )';
+            
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        cameraMode.timer = Date.now();
+
+    } else {
+        
+        cameraMode.state = "FULL";
+        canvasElementSegmentation.style.transform = 'scaleX(-1)';
+        canvasElement.style.transform = 'scaleX(-1)';
+        cameraMode.timer = Date.now();
 
     }
 

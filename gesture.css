@@ -58,3 +58,10 @@
 .select-items div:hover, .same-as-selected {
   background-color: rgba(0, 0, 0, 0.1);
 }
+
+
+.segmentation_canvas, .output_canvas {
+  transition-property: transform;
+  transition-duration: 1s;
+  transition-delay: 1s;
+}
