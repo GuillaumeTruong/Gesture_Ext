@@ -18,6 +18,10 @@ function injectedFunction(extensionId) {
     var fp = document.createElement( 'script' );
     fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/FingerPose.js` );
     document.body.appendChild( fp );
+    
+    var fp = document.createElement( 'script' );
+    fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/kalman.js` );
+    document.body.appendChild( fp );
 
     var c = document.createElement('script');
     c.setAttribute('src', `chrome-extension://${extensionId}/scripts/vision_bundle.js`);
