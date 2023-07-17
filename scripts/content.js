@@ -1,4 +1,4 @@
-let mode = "PUSH"; // "PUSH" "PINCH" "KEYBOARD"
+let mode = "PINCH"; // "PUSH" "PINCH" "KEYBOARD"
 
 let activateKalman = true;
 
@@ -63,7 +63,7 @@ let mouseDownOption = {
 }
 
 let scrollOption = {
-    timeTolerance: 400,
+    timeTolerance: 150,
     scrollRatio: 60,
     threshold: 0.05
 }
@@ -741,7 +741,6 @@ function drawSelfie( resultSegmenter, resultsGesture, gesturesName ) {
 
 function actionHandler( landmarks, handednesses ) {
 
-
     // Gesture Estimator
     const est = gestureEstimator.estimate( landmarks, 9 );
 
@@ -758,10 +757,6 @@ function actionHandler( landmarks, handednesses ) {
         // console.log( gesture );
 
     }
-
-    // let newLandmarks = activateKalman ? updateKalman( handednesses.categoryName, landmarks ) : landmarks;
-    
-    
 
     // if ( handednesses.categoryName === "Left" )
     //     console.log( handednesses.categoryName + " : " +handAction[ handednesses.categoryName ].actionState + " ; " + gesture.name );
@@ -809,8 +804,12 @@ function noneHandler( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+            
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
@@ -941,8 +940,12 @@ function pointingHandler( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness )
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness )
+
+            }
             break;
 
         };
@@ -1030,7 +1033,8 @@ function initScroll( handedness, landmarks ) {
 
     handAction[ handedness ].actionParam = {
         firstP0: landmarks[ 0 ],
-        elementsToScroll: elements
+        elementsToScroll: elements,
+        timerScroll: Date.now()
     };
 
 }
@@ -1247,6 +1251,8 @@ function scrollHandler( handedness, landmarks ) {
         } );
 
     }
+
+    handAction[ handedness ].actionParam.timerScroll = Date.now();
 
 }
 
@@ -1522,8 +1528,12 @@ function noneHandlerPINCH( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
@@ -1540,40 +1550,6 @@ function noneHandlerPINCH( landmarks, handedness ) {
             break;
 
         };
-
-
-        // case "HOVER": {
-
-        //     handAction[ handedness ].actionState = "IDLE";
-        //     exitHover( handedness, landmarks );
-        //     resetAction( handedness );
-        //     break;
-
-        // };
-
-        // case "READY": {
-
-        //     if ( clickCheck( handedness, landmarks ) ) {
-
-        //         handAction[ handedness ].actionState = "HOVER";
-        //         clickHandler( handedness, landmarks );
-        //         exitReady( handedness, landmarks );
-        //         initHover( handedness, landmarks );
-
-        //     } else {
-
-        //         if ( Date.now() - handAction[ handedness ].actionParam.timerReady > clickOption.clickTimeTolerance ) {
-
-        //             handAction[ handedness ].actionState = "IDLE";
-        //             resetAction( handedness );
-
-        //         }
-
-        //     }
-        //     break;
-
-        // };
-
 
     }
 
@@ -1631,8 +1607,12 @@ function pointingHandlerPINCH( landmarks, handedness, gesture ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
@@ -1669,8 +1649,12 @@ function pinchHandlerPINCH( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
@@ -2081,8 +2065,12 @@ function noneHandlerKEYBOARD( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
@@ -2165,8 +2153,12 @@ function pointingHandlerKEYBOARD( landmarks, handedness ) {
         
         case "SCROLL": {
 
-            handAction[ handedness ].actionState = "IDLE";
-            resetAction( handedness );
+            if ( Date.now() - handAction[ handedness ].actionParam.timerScroll > scrollOption.timeTolerance ) {
+
+                handAction[ handedness ].actionState = "IDLE";
+                resetAction( handedness );
+
+            }
             break;
 
         };
