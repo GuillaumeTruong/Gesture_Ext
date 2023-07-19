@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+
+    <div class="popup_container">
+
+        <div class="title_container">
+            <label>Gesture !</label>
+        </div>
+
+        <div class="button_container">
+            <button id="switch_gesture">
+                <span id="switch_label"></span>
+            </button>
+        </div>
+
+        <div class="settings_container">
+            <div class="mode_container">
+                <button id="push_mode">Push</button>
+                <button id="pinch_mode">Pinch</button>
+                <button id="keyboard_mode">Keyboard</button>
+            </div>
+
+            <div class="videoRes_container">
+                <label for="videoRes-select">Video Resolution:</label>
+                <select name="videoRes" id="videoRes-select">
+                    <option value="720">480*720</option>
+                    <option value="1280">720*1280</option>
+                    <option value="1920">1080*1920</option>
+                </select>
+            </div>
+
+            <div class="drawHands_container">
+                <label for="drawHands">Draw Hands</label>
+                <input type="checkbox" id="drawHands" name="drawHands">
+            </div>
+
+            <div>
+                <span>Opacity :</span>
+                <div class="opacity_container">
+                    <label for="opacity-global">Global:</label>
+                    <input type="number" id="opacity-global" name="opacity-global" min="0" max="1" step="0.01">
+                    <label for="opacity-hand">Hands:</label>
+                    <input type="number" id="opacity-hand" name="opacity-hand" min="0" max="1" step="0.01">
+                    <label for="opacity-body">Body:</label>
+                    <input type="number" id="opacity-body" name="opacity-body" min="0" max="1" step="0.01">
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+    <script src="./popup.js" type="module"></script>
+  </body>
+</html>

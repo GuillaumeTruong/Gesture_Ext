@@ -37,57 +37,83 @@ function injectedFunction(extensionId) {
 
 // injectedFunction( chrome.runtime.id );
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.action.setBadgeText({
-    text: "OFF",
-  });
-  console.log( "chrome.runtime.onInstalled");
+
+    chrome.action.setBadgeText({
+      text: "OFF",
+    });
+    console.log( "chrome.runtime.onInstalled");
+    
+    chrome.storage.local.set({ mode: "PUSH" }).then(() => {
+        console.log("Storage mode : PUSH");
+    });
+    
+    chrome.storage.local.set({ video_resolution: 720 }).then(() => {
+        console.log("Storage video_resolution : 720");
+    });
+    
+    chrome.storage.local.set({ drawhands: true}).then(() => {
+        console.log("Storage drawhands : true" );
+    });
+
+    chrome.storage.local.set({ opacityglobal: 0.7 }).then(() => {
+        console.log("Storage opacityglobal : 0.7" );
+    });
+    
+    chrome.storage.local.set({ opacityhand: 0.8 }).then(() => {
+        console.log("Storage opacityHand : 0.8" );
+    });
+    
+    chrome.storage.local.set({ opacitybody: 0.2 }).then(() => {
+        console.log("Storage opacityBody : 0.2");
+    });
+  
 });
 
   
-// chrome.tabs.onUpdated.addListener(function (tab) {
-chrome.action.onClicked.addListener( async function (tab) {
+// // chrome.tabs.onUpdated.addListener(function (tab) {
+// chrome.action.onClicked.addListener( async function (tab) {
 
-  if(!tab.id) {
-    console.log('No tab id');
-    return;
-  }
+//   if(!tab.id) {
+//     console.log('No tab id');
+//     return;
+//   }
 
-  const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
-    // Next state will always be the opposite
-  const nextState = prevState === 'ON' ? 'OFF' : 'ON';
-  let stateExt = {
-    tabId: tab.id,
-    state: nextState,
-  };
+//   const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
+//     // Next state will always be the opposite
+//   const nextState = prevState === 'ON' ? 'OFF' : 'ON';
+//   let stateExt = {
+//     tabId: tab.id,
+//     state: nextState,
+//   };
 
-  chrome.storage.local.set({ stateExt: stateExt }).then(() => {
-    console.log("Storage stateExt : " + nextState);
-  });
+//   chrome.storage.local.set({ stateExt: stateExt }).then(() => {
+//     console.log("Storage stateExt : " + nextState);
+//   });
 
-  // Set the action badge to the next state
-  await chrome.action.setBadgeText({
-    tabId: tab.id,
-    text: nextState,
-  });
+//   // Set the action badge to the next state
+//   await chrome.action.setBadgeText({
+//     tabId: tab.id,
+//     text: nextState,
+//   });
 
-  console.log('on click');
-  console.log("click sur tab : " + tab.id);
+//   console.log('on click');
+//   console.log("click sur tab : " + tab.id);
 
-  chrome.scripting.executeScript({
-    target: {
-      tabId: tab.id,
-    },
-    world: 'MAIN',
-    func: injectedFunction,
-    args: [chrome.runtime.id]
-  });
+//   chrome.scripting.executeScript({
+//     target: {
+//       tabId: tab.id,
+//     },
+//     world: 'MAIN',
+//     func: injectedFunction,
+//     args: [chrome.runtime.id]
+//   });
 
-  chrome.scripting.insertCSS({
-    files: ["gesture.css"],
-    target: { tabId: tab.id },
-  });
+//   chrome.scripting.insertCSS({
+//     files: ["gesture.css"],
+//     target: { tabId: tab.id },
+//   });
 
-});
+// });
 
 
 chrome.tabs.onUpdated.addListener( async function ( tabID ) {

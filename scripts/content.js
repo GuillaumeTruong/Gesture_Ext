@@ -1,9 +1,13 @@
-let mode = "PINCH"; // "PUSH" "PINCH" "KEYBOARD"
+let mode = "PUSH"; // "PUSH" "PINCH" "KEYBOARD"
 
 let activateKalman = true;
 
 let extId;
 
+let getDataTimer;
+let getDataDelay = 10000;
+
+let display_Hands = true;
 let videoResolution = 720; // 720 // 1280 // 1920
 let video;
 let canvasElementSegmentation, canvasElement, canvasTmp;
@@ -73,7 +77,6 @@ let landmarksPoints = {
     Right: []
 };
 
-
 let selfieState = "IDLE";
 let selfieOption = {
     enable: true,
@@ -107,6 +110,7 @@ init();
 async function init() {
     
     console.log( 'Init Gesture' );
+    // getDataFromStorage();
     initDocument();
     initKeyboard();
     initKalmanFilter();
@@ -401,6 +405,8 @@ function startStream( stream, stream_settings ) {
 
 async function predictWebcam() {
 
+    // if ( Date.now() - getDataTimer > getDataDelay ) getDataFromStorage();
+
     let gesturesName = [];
 
     // Hand
@@ -498,28 +504,32 @@ async function predictWebcam() {
 
 function drawHands( results ) {
 
-    let colorRight = "rgba(0, 255, 0, 0.5)";
-    let colorLeft = "rgba(255, 0, 0, 0.5)";
-    let color = "rgba(0, 0, 0, 0.5)";
+    if ( display_Hands ) {
 
-    for ( let i = 0; i < results.handednesses.length; i++ ) {
+        let colorRight = "rgba(0, 255, 0, 0.5)";
+        let colorLeft = "rgba(255, 0, 0, 0.5)";
+        let color = "rgba(0, 0, 0, 0.5)";
 
-        if ( results.handednesses[ i ][ 0 ].categoryName === "Right" ) {
+        for ( let i = 0; i < results.handednesses.length; i++ ) {
 
-            color = colorRight;
+            if ( results.handednesses[ i ][ 0 ].categoryName === "Right" ) {
 
-        } else if ( results.handednesses[ i ][ 0 ].categoryName === "Left" ) {
+                color = colorRight;
 
-            color = colorLeft;
+            } else if ( results.handednesses[ i ][ 0 ].categoryName === "Left" ) {
+
+                color = colorLeft;
+
+            }
+
+            drawingMediapipe.drawConnectors( results.landmarks[ i ], HAND_CONNECTIONS, {
+                color: color,
+                lineWidth: 5
+            });
+
+            drawingMediapipe.drawLandmarks( results.landmarks[ i ], { color: "#FFF", lineWidth: 2 });
 
         }
-
-        drawingMediapipe.drawConnectors( results.landmarks[ i ], HAND_CONNECTIONS, {
-            color: color,
-            lineWidth: 5
-        });
-
-        drawingMediapipe.drawLandmarks( results.landmarks[ i ], { color: "#FFF", lineWidth: 2 });
 
     }
 
@@ -2831,5 +2841,37 @@ function switchCameraMode() {
         cameraMode.timer = Date.now();
 
     }
+
+}
+
+function getDataFromStorage() {
+    
+    console.log ( chrome );
+
+    chrome.storage.local.get( [ "mode" ] ).then( ( result ) => {
+        mode = result.mode;
+    } );
+
+    chrome.storage.local.get( [ "video_resolution" ] ).then( ( result ) => {
+        videoResolution = result.video_resolution;
+    } );
+    
+    chrome.storage.local.get( [ "drawhands" ] ).then( ( result ) => {
+        display_Hands = result.drawhands;
+    } );
+    
+    chrome.storage.local.get( [ "opacityglobal" ] ).then( ( result ) => {
+        selfieOption.opacityIdle = Math.floor( result.opacityglobal * 255 );
+    } );
+
+    chrome.storage.local.get( [ "opacityhand" ] ).then( ( result ) => {
+        selfieOption.opacityHand = Math.floor( result.opacityhand * 255 );
+    } );
+
+    chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
+        selfieOption.opacityBody = Math.floor( result.opacitybody * 255 );
+    } );
+
+    getDataTimer = Date.now();
 
 }

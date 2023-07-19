@@ -8,7 +8,8 @@
     },
     "action": {
         "default_title": "Gesture!",
-        "default_icon": "logo.png"
+        "default_icon": "logo.png",
+        "default_popup": "popup.html"
     },
     "permissions": [ "activeTab", "scripting", "tabs", "storage" ],
     "web_accessible_resources": [{
