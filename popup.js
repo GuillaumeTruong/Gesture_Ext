@@ -86,13 +86,15 @@ button.addEventListener("click", async () => {
     console.log('on click');
     console.log("click sur tab : " + tabId);
 
+    let dataPopUp = await getDataFromStorage();
+
     chrome.scripting.executeScript({
         target: {
         tabId: tabId,
         },
         world: 'MAIN',
         func: injectedFunction,
-        args: [chrome.runtime.id]
+        args: [ chrome.runtime.id, dataPopUp ]
     });
 
     chrome.scripting.insertCSS({
@@ -107,47 +109,58 @@ async function getCurrentTab() {
     let queryOptions = { active: true };//, lastFocusedWindow: true };
     // `tab` will either be a `tabs.Tab` instance or `undefined`.
     let tab = await chrome.tabs.query(queryOptions);
-    console.log( "tab" )
-    console.log( tab )
+    // console.log( "tab" )
+    // console.log( tab )
     return tab;
 
 }
 
-function injectedFunction( extensionId ) {
+function injectedFunction( extensionId, dataPopUp ) {
 
     console.log( window.gestureExtension );
   
     if(!window.gestureExtension) {
   
-      window.gestureExtension = true;
-      console.log('injected');
-      console.log( extensionId );
-      var a = document.createElement('script');
-      a.setAttribute('src', `chrome-extension://${extensionId}/scripts/env.js`);
-      a.setAttribute('data-gesture', "1");
-      a.setAttribute('data-runtime-id', `${extensionId}`);
-      console.log(`chrome-extension://${extensionId}/scripts/env.js`)
-      document.body.appendChild(a);
-  
-      var fp = document.createElement( 'script' );
-      fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/FingerPose.js` );
-      document.body.appendChild( fp );
-      
-      var fp = document.createElement( 'script' );
-      fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/kalman.js` );
-      document.body.appendChild( fp );
-  
-      var c = document.createElement('script');
-      c.setAttribute('src', `chrome-extension://${extensionId}/scripts/vision_bundle.js`);
-      document.body.appendChild(c);
-      
-        testchromeacess( "111" );
+        window.gestureExtension = true;
+        console.log('injected');
+        console.log( extensionId );
+        var a = document.createElement('script');
+        a.setAttribute('src', `chrome-extension://${extensionId}/scripts/env.js`);
+        a.setAttribute('data-gesture', "1");
+        a.setAttribute('data-runtime-id', `${extensionId}`);
+        console.log(`chrome-extension://${extensionId}/scripts/env.js`)
+        document.body.appendChild(a);
+    
+        var fp = document.createElement( 'script' );
+        fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/FingerPose.js` );
+        document.body.appendChild( fp );
+        
+        var fp = document.createElement( 'script' );
+        fp.setAttribute( 'src', `chrome-extension://${extensionId}/scripts/kalman.js` );
+        document.body.appendChild( fp );
+    
+        var c = document.createElement('script');
+        c.setAttribute('src', `chrome-extension://${extensionId}/scripts/vision_bundle.js`);
+        document.body.appendChild(c);
+        
+        var d = document.createElement('span');
+        d.id = "data-popup-gesture"
+        d.style = "display: none";
+        document.body.appendChild(d);
+
+        for (const property in dataPopUp) {
+
+            d.dataset[ property ] = dataPopUp[ property ];
+
+        }
+
   
     } else {
   
       console.log('not injected');
   
     }
+
 }
 
 btn_push_mode.addEventListener("click", async () => {
@@ -225,3 +238,36 @@ btn_opacityBody.addEventListener("change", ( e ) => {
     });
     
 } );
+
+
+async function getDataFromStorage() {
+    
+    let dataset = {};
+  
+    await chrome.storage.local.get( [ "mode" ] ).then( ( result ) => {
+      dataset.mode = result.mode;
+    } );
+  
+    await chrome.storage.local.get( [ "video_resolution" ] ).then( ( result ) => {
+        dataset.video_resolution = result.video_resolution;
+    } );
+    
+    await chrome.storage.local.get( [ "drawhands" ] ).then( ( result ) => {
+        dataset.drawhands = result.drawhands;
+    } );
+    
+    await chrome.storage.local.get( [ "opacityglobal" ] ).then( ( result ) => {
+        dataset.opacityidle = result.opacityglobal;
+    } );
+
+    await chrome.storage.local.get( [ "opacityhand" ] ).then( ( result ) => {
+        dataset.opacityhand = result.opacityhand;
+    } );
+
+    await chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
+        dataset.opacitybody = result.opacitybody;
+    } );
+  
+    return dataset;
+  
+}

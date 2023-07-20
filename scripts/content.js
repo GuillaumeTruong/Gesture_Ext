@@ -110,7 +110,7 @@ init();
 async function init() {
     
     console.log( 'Init Gesture' );
-    // getDataFromStorage();
+    getDataFromStorage();
     initDocument();
     initKeyboard();
     initKalmanFilter();
@@ -405,7 +405,7 @@ function startStream( stream, stream_settings ) {
 
 async function predictWebcam() {
 
-    // if ( Date.now() - getDataTimer > getDataDelay ) getDataFromStorage();
+    if ( Date.now() - getDataTimer > getDataDelay ) getDataFromStorageDynamic();
 
     let gesturesName = [];
 
@@ -503,6 +503,7 @@ async function predictWebcam() {
 }
 
 function drawHands( results ) {
+
 
     if ( display_Hands ) {
 
@@ -2845,32 +2846,47 @@ function switchCameraMode() {
 }
 
 function getDataFromStorage() {
-    
-    console.log ( chrome );
 
-    chrome.storage.local.get( [ "mode" ] ).then( ( result ) => {
-        mode = result.mode;
-    } );
+    // console.log( "data pop up :" );
 
-    chrome.storage.local.get( [ "video_resolution" ] ).then( ( result ) => {
-        videoResolution = result.video_resolution;
-    } );
-    
-    chrome.storage.local.get( [ "drawhands" ] ).then( ( result ) => {
-        display_Hands = result.drawhands;
-    } );
-    
-    chrome.storage.local.get( [ "opacityglobal" ] ).then( ( result ) => {
-        selfieOption.opacityIdle = Math.floor( result.opacityglobal * 255 );
-    } );
+    let dataDOM = document.getElementById( "data-popup-gesture" );
 
-    chrome.storage.local.get( [ "opacityhand" ] ).then( ( result ) => {
-        selfieOption.opacityHand = Math.floor( result.opacityhand * 255 );
-    } );
+    mode = dataDOM.dataset.mode;
+    // console.log( "mode : " + mode );
 
-    chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
-        selfieOption.opacityBody = Math.floor( result.opacitybody * 255 );
-    } );
+    videoResolution = parseInt( dataDOM.dataset.video_resolution );
+    // console.log( "videoResolution : " + videoResolution );
+
+    display_Hands = dataDOM.dataset.drawhands === "true";
+    // console.log( "display_Hands : " + display_Hands );
+
+    selfieOption.opacityIdle = Math.floor( parseFloat( dataDOM.dataset.opacityidle ) * 255 );
+    // console.log( "opacityIdle : " + selfieOption.opacityIdle );
+
+    selfieOption.opacityHand = Math.floor( parseFloat( dataDOM.dataset.opacityhand ) * 255 );
+    // console.log( "opacityHand : " + selfieOption.opacityHand );
+
+    selfieOption.opacityBody = Math.floor( parseFloat( dataDOM.dataset.opacitybody ) * 255 );
+    // console.log( "opacityBody : " + selfieOption.opacityBody );
+
+    getDataTimer = Date.now();
+
+}
+
+function getDataFromStorageDynamic() {
+
+    let dataDOM = document.getElementById( "data-popup-gesture" );
+
+    display_Hands = dataDOM.dataset.drawhands === "true";
+
+    selfieOption.opacityIdle = Math.floor( parseFloat( dataDOM.dataset.opacityidle ) * 255 );
+    // console.log( "opacityIdle : " + selfieOption.opacityIdle );
+
+    selfieOption.opacityHand = Math.floor( parseFloat( dataDOM.dataset.opacityhand ) * 255 );
+    // console.log( "opacityHand : " + selfieOption.opacityHand );
+
+    selfieOption.opacityBody = Math.floor( parseFloat( dataDOM.dataset.opacitybody ) * 255 );
+    // console.log( "opacityBody : " + selfieOption.opacityBody );
 
     getDataTimer = Date.now();
 

@@ -1,5 +1,5 @@
 
-function injectedFunction(extensionId) {
+function injectedFunction( extensionId, dataPopUp ) {
 
   console.log( window.gestureExtension );
 
@@ -26,6 +26,17 @@ function injectedFunction(extensionId) {
     var c = document.createElement('script');
     c.setAttribute('src', `chrome-extension://${extensionId}/scripts/vision_bundle.js`);
     document.body.appendChild(c);
+    
+    var d = document.createElement('span');
+    d.id = "data-popup-gesture"
+    d.style = "display: none";
+    document.body.appendChild(d);
+
+    for (const property in dataPopUp) {
+
+      d.dataset[ property ] = dataPopUp[ property ];
+
+    }
 
   } else {
 
@@ -120,7 +131,7 @@ chrome.tabs.onUpdated.addListener( async function ( tabID ) {
 
   console.log( "chrome.tabs.onUpdated" );
 
-  chrome.storage.local.get( [ "stateExt" ] ).then( ( result ) => {
+  chrome.storage.local.get( [ "stateExt" ] ).then( async ( result ) => {
 
     let isSameTab = true;
     console.log( "Value currently is " + result.stateExt );
@@ -145,13 +156,15 @@ chrome.tabs.onUpdated.addListener( async function ( tabID ) {
         text: result.stateExt.state,
       });
       
+      let dataPopUp = await getDataFromStorage();
+      
       chrome.scripting.executeScript({
         target: {
           tabId: tabID,
         },
         world: 'MAIN',
         func: injectedFunction,
-        args: [chrome.runtime.id]
+        args: [chrome.runtime.id, dataPopUp]
       });
       
       chrome.scripting.insertCSS({
@@ -168,3 +181,95 @@ chrome.tabs.onUpdated.addListener( async function ( tabID ) {
 
 // chrome.tabs.onActivated.addListener(handleActivated);
 // chrome.tabs.onActivated.addListener(handleActivated);
+
+chrome.storage.onChanged.addListener( async ( changes, namespace ) => {
+
+  let tabs = await getCurrentTab();
+  let tabID = tabs[ 0 ].id;
+
+  let dataPopUp = await getDataFromStorage();
+
+  console.log( dataPopUp );
+  
+  chrome.scripting.executeScript({
+    target: {
+      tabId: tabID,
+    },
+    world: 'MAIN',
+    func: updateDataPopUp,
+    args: [ changes, namespace, dataPopUp ]
+  });
+
+} );
+
+function updateDataPopUp( changes, namespace, dataPopUp ) {
+
+  console.log("updateDataPopUp");
+
+  let dataDOM = document.getElementById( "data-popup-gesture" );
+
+  if( dataDOM ) {
+
+    for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+
+      dataDOM.dataset[ key ] = newValue;
+
+    }
+
+  } else {
+
+    var d = document.createElement('span');
+    d.id = "data-popup-gesture"
+    d.style = "display: none";
+    document.body.appendChild(d);
+  
+    for (const property in dataPopUp) {
+  
+      d.dataset[ property ] = dataPopUp[ property ];
+  
+    }
+
+  }
+
+}
+
+async function getDataFromStorage() {
+    
+  let dataset = {};
+
+  await chrome.storage.local.get( [ "mode" ] ).then( ( result ) => {
+    dataset.mode = result.mode;
+  } );
+
+  await chrome.storage.local.get( [ "video_resolution" ] ).then( ( result ) => {
+    dataset.video_resolution = result.video_resolution;
+  } );
+  
+  await chrome.storage.local.get( [ "drawhands" ] ).then( ( result ) => {
+    dataset.drawhands = result.drawhands;
+  } );
+  
+  await chrome.storage.local.get( [ "opacityglobal" ] ).then( ( result ) => {
+    dataset.opacityidle = result.opacityglobal;
+  } );
+
+  await chrome.storage.local.get( [ "opacityhand" ] ).then( ( result ) => {
+    dataset.opacityhand = result.opacityhand;
+  } );
+
+  await chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
+    dataset.opacitybody = result.opacitybody;
+  } );
+
+  return dataset;
+
+}
+
+async function getCurrentTab() {
+
+  let queryOptions = { active: true };//, lastFocusedWindow: true };
+  // `tab` will either be a `tabs.Tab` instance or `undefined`.
+  let tab = await chrome.tabs.query(queryOptions);
+  return tab;
+
+}
