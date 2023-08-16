@@ -94,6 +94,7 @@ body {
 
 .settings_container {
     margin: 0 10px 10px 10px;
+    /* border-top: 1px solid #000; */
 }
 
 .settings_container > div {
@@ -108,15 +109,34 @@ body {
 }
 
 .mode_container > button.checked {
-    background-color: rgb(0, 255, 64);
+    background-color: rgb(30, 254, 138);
+    color: #000;
 }
 
 .mode_container > button.unchecked {
     background-color: rgb(203, 30, 21);
+    color: #fff;
+    cursor: pointer;
+}
+
+.mode_container > button.unchecked:hover {
+    background-color: rgb(255, 97, 89);
+    color: #000;
 }
 
 .mode_container > button {
-    border: 1px solid #ddd;
+    border: 0px solid #ddd;
+    height: 25px;
+}
+
+.mode_container > #push_mode {
+    border-radius: 5px 0 0 5px;
+    border-right: 1px solid rgb(255, 255, 255);
+}
+
+.mode_container > #keyboard_mode {
+    border-radius: 0 5px 5px 0;
+    border-left: 1px solid rgb(255, 255, 255);
 }
 
 .videoRes_container {
