@@ -53,6 +53,11 @@ let handAction = {
     }
 };
 
+let twoHandsZoomParams = {
+    fistDist: null,
+    zoomPercent: 100
+};
+
 let clickOption = {
     readyDualTime: 1000,
     clickMaxTime: 500,
@@ -179,7 +184,32 @@ function initDocument() {
         selectElements[i].classList.add("custom-select");
     }
 
+    // window.addEventListener( 'resize', e => onWindowResize( e ) );
+
 }
+
+// function onWindowResize( e ) {
+
+    // console.log( e );
+    
+    // let zoom = 1 / ( twoHandsZoomParams.zoomPercent / 100 );    
+    // console.log( twoHandsZoomParams.zoomPercent );
+    // console.log( zoom );
+    // // canvasElementSegmentation.style.transform = 'scale(-2,2)';
+    // canvasElementSegmentation.style.transform = 'scale(-' + zoom + ', ' + zoom + ')';
+    // canvasElement.style.transform = 'scale(-' + zoom + ', ' + zoom + ')';
+    // console.log( canvasElementSegmentation.style.transform );
+    
+
+    // canvasElementSegmentation, canvasElement, canvasTmp
+    // camera.aspect = window.innerWidth / window.innerHeight;
+    // camera.updateProjectionMatrix();
+    // renderer.setSize( window.innerWidth, window.innerHeight );
+    
+    // canvasElementSegmentation.setSize( window.innerWidth, window.innerHeight );
+    // finalComposer.setSize( window.innerWidth, window.innerHeight );
+
+// }
 
 function initCameraMode() {
     
@@ -459,14 +489,29 @@ async function predictWebcam() {
         }
 
         // Handle Action
-        for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
 
-            gesturesName.push(
-                actionHandlerFct(
-                    resultsGesture.landmarks[ i ],
-                    resultsGesture.handednesses[ i ][ 0 ]
-                )
-            );
+        // Two hands
+        let resultTH = false;
+
+        resultTH ||= twoHandZoomHandler( 
+            resultsGesture.landmarks,
+            resultsGesture.handednesses
+        );
+
+
+        if( !resultTH ) {
+
+            // Each hand
+            for ( let i = 0; i < resultsGesture.handednesses.length; i++ ) {
+
+                gesturesName.push(
+                    actionHandlerFct(
+                        resultsGesture.landmarks[ i ],
+                        resultsGesture.handednesses[ i ][ 0 ]
+                    )
+                );
+
+            }
 
         }
 
@@ -1058,19 +1103,21 @@ function initHover( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( newElement, p.x, p.y );
 
-    newElement.dispatchEvent( new MouseEvent( 'mouseenter',
-    {
-        target: newElement,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseOver(
+        newElement,
+        {
+            target: newElement,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     newElement.focus();
 
@@ -1098,19 +1145,21 @@ function initMouseDown( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementReady, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousedown',
-    {
-        target: handAction[ handedness ].actionParam.elementReady,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseDown(
+        handAction[ handedness ].actionParam.elementReady,
+        {
+            target: handAction[ handedness ].actionParam.elementReady,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     let positionDiff = {
         x: handAction[ handedness ].actionParam.readyP8.x - landmarks[ 5 ].x,
@@ -1135,19 +1184,21 @@ function exitHover( handedness, landmarks ) {
 
     let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
 
-    handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
-    {
-        target: handAction[ handedness ].actionParam.currentElement,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSetOld.x,
-        offsetY: offSetOld.y
-    } ) );
+    dispatchEventMouseLeave(
+        handAction[ handedness ].actionParam.currentElement,
+        {
+            target: handAction[ handedness ].actionParam.currentElement,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSetOld.x,
+            offsetY: offSetOld.y
+        }
+    );
 
     document.activeElement.blur();
 
@@ -1159,19 +1210,21 @@ function exitReady( handedness, landmarks ) {
 
     let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.elementReady, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mouseleave',
-    {
-        target: handAction[ handedness ].actionParam.elementReady,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSetOld.x,
-        offsetY: offSetOld.y
-    } ) );
+    dispatchEventMouseLeave(
+        handAction[ handedness ].actionParam.elementReady,
+        {
+            target: handAction[ handedness ].actionParam.elementReady,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSetOld.x,
+            offsetY: offSetOld.y
+        }
+    );
 
     document.activeElement.blur();
 
@@ -1189,33 +1242,37 @@ function exitMouseDown( handedness, landmarks ) {
 
     let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseup',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSetOld.x,
-        offsetY: offSetOld.y
-    } ) );
+    dispatchEventMouseUp(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSetOld.x,
+            offsetY: offSetOld.y
+        }
+    );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseleave',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSetOld.x,
-        offsetY: offSetOld.y
-    } ) );
+    dispatchEventMouseLeave(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSetOld.x,
+            offsetY: offSetOld.y
+        }
+    );
 
     document.activeElement.blur();
 
@@ -1275,7 +1332,7 @@ function hoverHandler( handedness, landmarks, element ) {
 
     if ( element.isSameNode( handAction[ handedness ].actionParam.currentElement ) ) {
 
-        element.dispatchEvent( new MouseEvent( 'mousemove',
+        dispatchEventMouseMove( element, 
         {
             target: element,
             view: window,
@@ -1287,38 +1344,43 @@ function hoverHandler( handedness, landmarks, element ) {
             clientY: p.y,
             offsetX: offSet.x,
             offsetY: offSet.y
-        } ) );
+        } );
 
     } else {
         
         let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
-        handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
-        {
-            target: handAction[ handedness ].actionParam.currentElement,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSetOld.x,
-            offsetY: offSetOld.y
-        } ) );
         
-        element.dispatchEvent( new MouseEvent( 'mouseenter',
-        {
-            target: element,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSet.x,
-            offsetY: offSet.y
-        } ) );
+        dispatchEventMouseLeave(
+            handAction[ handedness ].actionParam.currentElement,
+            {
+                target: handAction[ handedness ].actionParam.currentElement,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSetOld.x,
+                offsetY: offSetOld.y
+            }
+        );
+            
+        dispatchEventMouseOver(
+            element,
+            {
+                target: element,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSet.x,
+                offsetY: offSet.y
+            }
+        );
         
         document.activeElement.blur();
         element.focus();
@@ -1339,19 +1401,21 @@ function readyHandler( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementReady, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousemove',
-    {
-        target: handAction[ handedness ].actionParam.elementReady,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseMove(
+        handAction[ handedness ].actionParam.elementReady ,
+        {
+            target: handAction[ handedness ].actionParam.elementReady,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
     
     handAction[ handedness ].actionParam.timerReady = Date.now();
 
@@ -1381,34 +1445,37 @@ function clickHandler( handedness, landmarks ) {
         detail: 1
     } ) );
 
+    dispatchEventMouseDown(
+        handAction[ handedness ].actionParam.elementReady,
+        {
+            target: handAction[ handedness ].actionParam.elementReady,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
     
-    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mousedown',
-    {
-        target: handAction[ handedness ].actionParam.elementReady,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
-    
-    handAction[ handedness ].actionParam.elementReady.dispatchEvent( new MouseEvent( 'mouseup',
-    {
-        target: handAction[ handedness ].actionParam.elementReady,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseUp(
+        handAction[ handedness ].actionParam.elementReady,
+        {
+            target: handAction[ handedness ].actionParam.elementReady,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
 }
 
@@ -1439,19 +1506,21 @@ function mouseDownHandler( handedness, landmarks ) {
 
     }
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseMove(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     handAction[ handedness ].actionParam.timerMD = Date.now();
 
@@ -1695,28 +1764,10 @@ function hoverHandlerPINCH( handedness, landmarks, finger = 8 ) {
         && element.isSameNode( handAction[ handedness ].actionParam.currentElement )
     ) {
 
-        element.dispatchEvent( new MouseEvent( 'mousemove',
-        {
-            target: element,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSet.x,
-            offsetY: offSet.y
-        } ) );
-
-    } else {
-        
-        if ( handAction[ handedness ].actionParam.currentElement ) {
-
-            let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
-            handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
+        dispatchEventMouseMove(
+            element,
             {
-                target: handAction[ handedness ].actionParam.currentElement,
+                target: element,
                 view: window,
                 bubbles: true,
                 cancelable: true,
@@ -1724,25 +1775,50 @@ function hoverHandlerPINCH( handedness, landmarks, finger = 8 ) {
                 y: p.y,
                 clientX: p.x,
                 clientY: p.y,
-                offsetX: offSetOld.x,
-                offsetY: offSetOld.y
-            } ) );
+                offsetX: offSet.x,
+                offsetY: offSet.y
+            }
+        );
+
+    } else {
+        
+        if ( handAction[ handedness ].actionParam.currentElement ) {
+
+            let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
+
+            dispatchEventMouseLeave(
+                handAction[ handedness ].actionParam.currentElement,
+                {
+                    target: handAction[ handedness ].actionParam.currentElement,
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    x: p.x,
+                    y: p.y,
+                    clientX: p.x,
+                    clientY: p.y,
+                    offsetX: offSetOld.x,
+                    offsetY: offSetOld.y
+                }
+            );
 
         }
         
-        element.dispatchEvent( new MouseEvent( 'mouseenter',
-        {
-            target: element,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSet.x,
-            offsetY: offSet.y
-        } ) );
+        dispatchEventMouseOver(
+            element,
+            {
+                target: element,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSet.x,
+                offsetY: offSet.y
+            }
+        );
         
         document.activeElement.blur();
         element.focus();
@@ -1765,19 +1841,21 @@ function exitHoverPINCH( handedness, landmarks ) {
 
         let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
 
-        handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
-        {
-            target: handAction[ handedness ].actionParam.currentElement,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSetOld.x,
-            offsetY: offSetOld.y
-        } ) );
+        dispatchEventMouseLeave(
+            handAction[ handedness ].actionParam.currentElement,
+            {
+                target: handAction[ handedness ].actionParam.currentElement,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSetOld.x,
+                offsetY: offSetOld.y
+            }
+        );
 
         document.activeElement.blur();
 
@@ -1799,19 +1877,21 @@ function initMDPinch( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( element, p.x, p.y );
 
-    element.dispatchEvent( new MouseEvent( 'mousedown',
-    {
-        target: element,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseDown(
+        element,
+        {
+            target: element,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     let positionDiff = {
         x: pmoy.x - landmarks[ 5 ].x,
@@ -1859,19 +1939,21 @@ function handlerMDPinch( handedness, landmarks ) {
 
     }
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseMove(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        } 
+    );
 
     drawPointerPINCH( landmarks[ 4 ], handedness );
 
@@ -1891,33 +1973,37 @@ function exitMDPinch( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseup',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseUp(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseleave',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseLeave(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
     
     handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'click',
     {
@@ -2210,28 +2296,10 @@ function hoverHandlerKEYBOARD( handedness, landmarks ) {
         && element.isSameNode( handAction[ handedness ].actionParam.currentElement )
     ) {
 
-        element.dispatchEvent( new MouseEvent( 'mousemove',
-        {
-            target: element,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSet.x,
-            offsetY: offSet.y
-        } ) );
-
-    } else {
-        
-        if ( handAction[ handedness ].actionParam.currentElement ) {
-
-            let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
-            handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
+        dispatchEventMouseMove(
+            element,
             {
-                target: handAction[ handedness ].actionParam.currentElement,
+                target: element,
                 view: window,
                 bubbles: true,
                 cancelable: true,
@@ -2239,25 +2307,50 @@ function hoverHandlerKEYBOARD( handedness, landmarks ) {
                 y: p.y,
                 clientX: p.x,
                 clientY: p.y,
-                offsetX: offSetOld.x,
-                offsetY: offSetOld.y
-            } ) );
+                offsetX: offSet.x,
+                offsetY: offSet.y
+            }
+        );
+
+    } else {
+        
+        if ( handAction[ handedness ].actionParam.currentElement ) {
+
+            let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
+
+            dispatchEventMouseLeave(
+                handAction[ handedness ].actionParam.currentElement,
+                {
+                    target: handAction[ handedness ].actionParam.currentElement,
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    x: p.x,
+                    y: p.y,
+                    clientX: p.x,
+                    clientY: p.y,
+                    offsetX: offSetOld.x,
+                    offsetY: offSetOld.y
+                }
+            );
 
         }
         
-        element.dispatchEvent( new MouseEvent( 'mouseenter',
-        {
-            target: element,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSet.x,
-            offsetY: offSet.y
-        } ) );
+        dispatchEventMouseOver(
+            element,
+            {
+                target: element,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSet.x,
+                offsetY: offSet.y
+            }
+        );
         
         document.activeElement.blur();
         element.focus();
@@ -2280,19 +2373,21 @@ function exitHoverKEYBOARD( handedness, landmarks ) {
 
         let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.currentElement, p.x, p.y );
 
-        handAction[ handedness ].actionParam.currentElement.dispatchEvent( new MouseEvent( 'mouseleave',
-        {
-            target: handAction[ handedness ].actionParam.currentElement,
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            x: p.x,
-            y: p.y,
-            clientX: p.x,
-            clientY: p.y,
-            offsetX: offSetOld.x,
-            offsetY: offSetOld.y
-        } ) );
+        dispatchEventMouseLeave(
+            handAction[ handedness ].actionParam.currentElement,
+            {
+                target: handAction[ handedness ].actionParam.currentElement,
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                x: p.x,
+                y: p.y,
+                clientX: p.x,
+                clientY: p.y,
+                offsetX: offSetOld.x,
+                offsetY: offSetOld.y
+            }
+        );
 
         document.activeElement.blur();
 
@@ -2307,19 +2402,21 @@ function initMDKEYBOARD( handedness, landmarks ) {
     let element = getElementatPosition( landmarks[ 8 ], false );
     let offSet = getRelativeCoordinates( element, p.x, p.y );
 
-    element.dispatchEvent( new MouseEvent( 'mousedown',
-    {
-        target: element,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseDown(
+        element,
+        {
+            target: element,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     handAction[ handedness ].actionParam = {
         firstP: landmarks[ 8 ],
@@ -2355,19 +2452,21 @@ function handlerMDKEYBOARD( handedness, landmarks ) {
 
     }
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mousemove',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseMove(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     drawPointerKEYBOARD( landmarks[ 8 ], handedness );
 
@@ -2381,33 +2480,37 @@ function exitMDKEYBOARD( handedness, landmarks ) {
 
     let offSet = getRelativeCoordinates( handAction[ handedness ].actionParam.elementMD, p.x, p.y );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseup',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseUp(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
-    handAction[ handedness ].actionParam.elementMD.dispatchEvent( new MouseEvent( 'mouseleave',
-    {
-        target: handAction[ handedness ].actionParam.elementMD,
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        x: p.x,
-        y: p.y,
-        clientX: p.x,
-        clientY: p.y,
-        offsetX: offSet.x,
-        offsetY: offSet.y
-    } ) );
+    dispatchEventMouseLeave(
+        handAction[ handedness ].actionParam.elementMD,
+        {
+            target: handAction[ handedness ].actionParam.elementMD,
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            x: p.x,
+            y: p.y,
+            clientX: p.x,
+            clientY: p.y,
+            offsetX: offSet.x,
+            offsetY: offSet.y
+        }
+    );
 
     console.log( "Click!" );
 
@@ -2498,6 +2601,119 @@ function drawPointerKEYBOARD( point, handedness ) {
         }
 
     }
+
+}
+
+
+
+/*-----------*
+ * TWO HANDS *
+ *-----------*/
+
+function twoHandZoomHandler( landmarks, handednesses ) {
+
+    if ( landmarks.length > 1 ) {
+
+        const est1 = gestureEstimator.estimate( landmarks[ 0 ], 9 );
+
+        let gesture1 = {
+            name: "None"
+        }
+
+        if ( est1.gestures.length > 0 ) {
+
+            gesture1 = est1.gestures.reduce((p, c) => {
+                return (p.score > c.score) ? p : c
+            });
+
+        }
+        
+        const est2 = gestureEstimator.estimate( landmarks[ 1 ], 9 );
+
+        let gesture2 = {
+            name: "None"
+        }
+
+        if ( est2.gestures.length > 0 ) {
+
+            gesture2 = est2.gestures.reduce((p, c) => {
+                return (p.score > c.score) ? p : c
+            });
+
+        }
+
+        if (  gesture1.name === "Closed_Fist" && gesture2.name === "Closed_Fist" ) {
+
+            let dist = distanceBetweenPoints( landmarks[ 0 ][ 0 ], landmarks[ 1 ][ 0 ] );
+            twoHandsZoomParams.fistDist = twoHandsZoomParams.fistDist ?? dist;
+            twoHandsZoomParams.zoomTmp = twoHandsZoomParams.zoomTmp ?? twoHandsZoomParams.zoomPercent;
+
+            let zoomToAdd = 100 * ( ( dist / twoHandsZoomParams.fistDist ) - 1 );
+            zoomToAdd = Math.sign( zoomToAdd ) * Math.floor( Math.abs( zoomToAdd ) / 20 );
+            zoomToAdd *= 10;
+
+            twoHandsZoomParams.zoomPercent = twoHandsZoomParams.zoomTmp + zoomToAdd;
+
+            resizecanvas();
+
+
+            document.body.style.zoom = twoHandsZoomParams.zoomPercent + "%";
+
+            return true;
+
+        } else {
+
+            twoHandsZoomParams.fistDist = null;
+            twoHandsZoomParams.zoomTmp = null;
+            canvasElementSegmentation.style.transition = "";
+            canvasElement.style.transition = "";
+            return false;
+
+        }
+        
+    }
+
+    twoHandsZoomParams.fistDist = null;
+    twoHandsZoomParams.zoomTmp = null;
+    canvasElementSegmentation.style.transition = "";
+    canvasElement.style.transition = "";
+
+    return false;
+
+}
+
+
+function resizecanvas() {
+
+    console.log( canvasElementSegmentation.style.transform );
+
+    let scale = 1 / ( twoHandsZoomParams.zoomPercent / 100 );    
+    console.log( twoHandsZoomParams.zoomPercent );
+    console.log( scale );
+
+    canvasElementSegmentation.style.transition = "transform 0s ease-in-out 0s";
+    canvasElement.style.transition = "transform 0s ease-in-out 0s";
+
+    let translationY = - Math.round( ( video.height - video.height * scale ) / 2 );
+    let translationX = - Math.round( ( video.width - video.width * scale ) / 2 );
+    
+    // let translationY = Math.round( window.innerHeight - ( ( video.height +  video.height * windowScale ) / 2 ) );
+    // let translationX = Math.round( window.innerWidth - ( ( video.width +  video.width * windowScale ) / 2 ) );
+
+    // canvasElementSegmentation.style.transform = 'scale(-2,2)';
+    canvasElementSegmentation.style.transform = 'translate( ' + translationX + 'px, '
+        + translationY + 'px )' + 'scale(-' + scale + ', ' + scale + ')';
+    canvasElement.style.transform = 'translate( ' + translationX + 'px, '
+        + translationY + 'px )' + 'scale(-' + scale + ', ' + scale + ')';
+    console.log( canvasElementSegmentation.style.transform );
+    
+    // canvasElementSegmentation, canvasElement, canvasTmp
+    // camera.aspect = window.innerWidth / window.innerHeight;
+    // camera.updateProjectionMatrix();
+    // renderer.setSize( window.innerWidth, window.innerHeight );
+    
+    // canvasElementSegmentation.setSize( window.innerWidth, window.innerHeight );
+    // finalComposer.setSize( window.innerWidth, window.innerHeight );
 
 }
 
@@ -2889,5 +3105,48 @@ function getDataFromStorageDynamic() {
     // console.log( "opacityBody : " + selfieOption.opacityBody );
 
     getDataTimer = Date.now();
+
+}
+
+
+function dispatchEventMouseMove( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mousemove', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointermove', params ) );
+
+}
+
+function dispatchEventMouseDown( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mousedown', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointerdown', params ) );
+
+}
+
+function dispatchEventMouseUp( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mouseup', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointerup', params ) );
+
+}
+
+function dispatchEventMouseOver( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mouseover', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointerover', params ) );
+
+}
+
+function dispatchEventMouseEnter( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mouseenter', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointerenter', params ) );
+
+}
+
+function dispatchEventMouseLeave( target, params ) {
+    
+    target.dispatchEvent( new MouseEvent( 'mouseleave', params ) );
+    target.dispatchEvent( new PointerEvent( 'pointerleave', params ) );
 
 }

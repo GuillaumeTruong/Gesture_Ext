@@ -59,6 +59,41 @@
   </form>
 
   <script>
+
+
+// window.addEventListener("keydown", (event) => {
+//       console.log( event )
+//     });
+    // document.addEventListener("wheel", (event) => {
+    //   console.log( event )
+    // });
+
+    // window.dispatchEvent(new KeyboardEvent('keydown', {key: "Control",keyCode: 17, code: 'ControlLeft', location: 1, ctrlKey: true,}));
+    // document.dispatchEvent( new WheelEvent( 'wheel',
+    // {
+    //     isTrusted: true,
+    //     target: document,
+    //     view: window,
+    //     bubbles: true,
+    //     cancelable: true,
+    //     deltaX: 0,
+    //     deltaY: -150,
+    //     wheelDeltaX: 0,
+    //     wheelDelta: 180,
+    //     wheelDeltaY: 180,
+    //     which: 0,
+    //     composed: true,
+    //     ctrlKey: true 
+    // } ) );
+//     document.addEventListener('wheel', function(e) {
+//   e.ctrlKey && e.preventDefault();
+// }, {
+//   passive: false,
+// });
+
+//   window.dispatchEvent(new CustomEvent('scroll', {isTrusted: true, type: 'scroll', target: document, currentTarget: document, eventPhase: 2}))
+
+    
     // Fonction pour enregistrer l'état de chaque input
     function saveState(inputName, value) {
       localStorage.setItem(inputName, value);
