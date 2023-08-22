@@ -403,7 +403,6 @@ async function enableCam() {
         },
     };
 
-  
     // Activate the webcam stream.
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
     stream_settings = stream.getVideoTracks()[0].getSettings();
@@ -1295,7 +1294,7 @@ function scrollHandler( handedness, landmarks ) {
         let p = landmarksToXYPixelDocument( handAction[ handedness ].actionParam.firstP0 );
         let offSetOld = getRelativeCoordinates( handAction[ handedness ].actionParam.elementsToScroll[ 0 ], p.x, p.y );
 
-        handAction[ handedness ].actionParam.elementsToScroll[ 0 ].dispatchEvent( new MouseEvent( 'mousewheel',
+        handAction[ handedness ].actionParam.elementsToScroll[ 0 ].dispatchEvent( new WheelEvent( 'wheel',
         {
             target: handAction[ handedness ].actionParam.elementToScroll,
             view: window,
@@ -2688,8 +2687,6 @@ function resizecanvas() {
     console.log( canvasElementSegmentation.style.transform );
 
     let scale = 1 / ( twoHandsZoomParams.zoomPercent / 100 );    
-    console.log( twoHandsZoomParams.zoomPercent );
-    console.log( scale );
 
     canvasElementSegmentation.style.transition = "transform 0s ease-in-out 0s";
     canvasElement.style.transition = "transform 0s ease-in-out 0s";
@@ -2705,7 +2702,6 @@ function resizecanvas() {
         + translationY + 'px )' + 'scale(-' + scale + ', ' + scale + ')';
     canvasElement.style.transform = 'translate( ' + translationX + 'px, '
         + translationY + 'px )' + 'scale(-' + scale + ', ' + scale + ')';
-    console.log( canvasElementSegmentation.style.transform );
     
     // canvasElementSegmentation, canvasElement, canvasTmp
     // camera.aspect = window.innerWidth / window.innerHeight;
