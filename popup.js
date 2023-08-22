@@ -88,6 +88,20 @@ button.addEventListener("click", async () => {
 
     let dataPopUp = await getDataFromStorage();
 
+    let url = tabs[0].url;
+    url = url.split('#')[ 0 ];
+
+    if ( !dataPopUp.links.includes( url ) ) {
+
+        dataPopUp.links.push( url );
+        if ( dataPopUp.links.length > 4 ) dataPopUp.links.shift();
+
+    }
+
+    chrome.storage.local.set({ links: dataPopUp.links }).then(() => {
+        console.log( "Storage links : " + dataPopUp.links );
+    });
+
     chrome.scripting.executeScript({
         target: {
         tabId: tabId,
@@ -266,6 +280,10 @@ async function getDataFromStorage() {
 
     await chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
         dataset.opacitybody = result.opacitybody;
+    } );
+
+    await chrome.storage.local.get( [ "links" ] ).then( ( result ) => {
+        dataset.links = result.links;
     } );
   
     return dataset;

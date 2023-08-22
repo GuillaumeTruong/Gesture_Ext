@@ -14,6 +14,8 @@ let canvasElementSegmentation, canvasElement, canvasTmp;
 let canvasCtxSeg, canvasCtx, canvasTmpCtx;
 let currentKey = new Set();
 
+let links = [];
+
 let gestureRecognizer, imageSegmenter;
 let drawingMediapipe;
 let stream_settings;
@@ -119,7 +121,7 @@ async function init() {
     initDocument();
     initKeyboard();
     initKalmanFilter();
-    initMediapipe();
+    await initMediapipe();
     initFingerPose();
     enableCam();
 
@@ -133,6 +135,46 @@ function initDocument() {
     camContainer.style = "position: fixed; left: 0px; top: 0px; z-index: 2147483647;";
     camContainer.className  = "cam_container";
     document.body.appendChild( camContainer );
+
+    let btnLinksContainer = document.createElement( 'div' );
+    btnLinksContainer.id = "btn_links_container";
+    btnLinksContainer.className  = "btn_links_container";
+    camContainer.appendChild( btnLinksContainer );
+
+    let btnLinksTitle = document.createElement( 'div' );
+    btnLinksTitle.id = "btn_links_title";
+    btnLinksTitle.className  = "btn_links_title";
+    camContainer.appendChild( btnLinksTitle );
+    
+
+    for ( let link of links ) {
+
+        let btnLink = document.createElement( 'div' );
+        btnLink.id = "btn_links";
+        btnLink.dataset.url = link;
+        btnLink.className = "btn_links";
+        let txtUrl = link.replace( 'http://', '' );
+        txtUrl = txtUrl.replace( 'https://', '' );
+        txtUrl = (txtUrl.length > 24) ? txtUrl.slice(0, 8) + '...' + txtUrl.slice( -8 ): txtUrl;
+        btnLink.innerText = txtUrl;
+        btnLink.title = link;
+        btnLink.addEventListener("click", (e) => {
+            window.location.href = ( e.target.dataset.url );
+        });
+        btnLinksContainer.appendChild( btnLink );
+        
+        btnLink.addEventListener("mousemove", function(e) {
+            btnLinksTitle.innerText = e.target.dataset.url;
+            btnLinksTitle.style.display = "block";
+            btnLinksTitle.style.left = (e.pageX + 10) + "px"; // Ajustez la position en fonction de vos besoins
+            btnLinksTitle.style.top = (e.pageY + 10) + "px";  // Ajustez la position en fonction de vos besoins
+        });
+        
+        btnLink.addEventListener("mouseleave", function() {
+            btnLinksTitle.style.display = "none";
+        });
+
+    }
     
     video = document.createElement( 'video' );
     video.autoplay = true;
@@ -177,39 +219,18 @@ function initDocument() {
     extId = extId.getAttribute('data-runtime-id');
     console.log( extId );
 
+    canvasTmpCtx = canvasTmp.getContext( "2d" );
+
 
     // modify all <select> elements
-    let selectElements = document.querySelectorAll("select");
-    for (var i = 0; i < selectElements.length; i++) {
-        selectElements[i].classList.add("custom-select");
-    }
+    // let selectElements = document.querySelectorAll("select");
+    // for (var i = 0; i < selectElements.length; i++) {
+    //     selectElements[i].classList.add("custom-select");
+    // }
 
     // window.addEventListener( 'resize', e => onWindowResize( e ) );
 
 }
-
-// function onWindowResize( e ) {
-
-    // console.log( e );
-    
-    // let zoom = 1 / ( twoHandsZoomParams.zoomPercent / 100 );    
-    // console.log( twoHandsZoomParams.zoomPercent );
-    // console.log( zoom );
-    // // canvasElementSegmentation.style.transform = 'scale(-2,2)';
-    // canvasElementSegmentation.style.transform = 'scale(-' + zoom + ', ' + zoom + ')';
-    // canvasElement.style.transform = 'scale(-' + zoom + ', ' + zoom + ')';
-    // console.log( canvasElementSegmentation.style.transform );
-    
-
-    // canvasElementSegmentation, canvasElement, canvasTmp
-    // camera.aspect = window.innerWidth / window.innerHeight;
-    // camera.updateProjectionMatrix();
-    // renderer.setSize( window.innerWidth, window.innerHeight );
-    
-    // canvasElementSegmentation.setSize( window.innerWidth, window.innerHeight );
-    // finalComposer.setSize( window.innerWidth, window.innerHeight );
-
-// }
 
 function initCameraMode() {
     
@@ -2142,7 +2163,7 @@ function actionHandlerKEYBOARD( landmarks, handednesses ) {
 
     }
 
-    return gesture;
+    return gesture.name;
 
 }
 
@@ -3079,6 +3100,10 @@ function getDataFromStorage() {
     // console.log( "opacityHand : " + selfieOption.opacityHand );
 
     selfieOption.opacityBody = Math.floor( parseFloat( dataDOM.dataset.opacitybody ) * 255 );
+    // console.log( "opacityBody : " + selfieOption.opacityBody );
+    
+    links = dataDOM.dataset.links.split(',');
+    links.pop();
     // console.log( "opacityBody : " + selfieOption.opacityBody );
 
     getDataTimer = Date.now();

@@ -65,3 +65,33 @@
   transition-duration: 1s;
   transition-delay: 1s;
 }
+
+.btn_links_container {
+  position: absolute;
+  top: 5px;
+  left: 40vw;
+  display: flex;
+  flex-direction: row;
+}
+
+.btn_links {
+  opacity: 0.6;
+  margin: 5px;
+  height: 20px;
+  padding: 5px;
+  background-color: #ddd;
+  border: 1px solid #000;
+  border-radius: 5px;
+
+  /* position: absolute;
+  top: 0;
+  left: 50%; */
+}
+
+.btn_links_title {
+  background-color: #fefefe;
+  border: 1px solid #000;
+  padding: 5px;
+  position: absolute;
+  display: none;
+}

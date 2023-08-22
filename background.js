@@ -77,6 +77,10 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.set({ opacitybody: 0.2 }).then(() => {
         console.log("Storage opacityBody : 0.2");
     });
+    
+    chrome.storage.local.set({ links: [] }).then(() => {
+      console.log("Storage init links");
+  });
   
 });
 
@@ -157,6 +161,31 @@ chrome.tabs.onUpdated.addListener( async function ( tabID ) {
       });
       
       let dataPopUp = await getDataFromStorage();
+
+      let tabs = await getCurrentTab();
+      let url = tabs[ 0 ].url;
+      url = url.split('#')[ 0 ];
+
+      // if( dataPopUp.links ) {
+
+      //   dataPopUp.links.shift();
+      //   dataPopUp.links.push( url );
+
+      // }
+
+      if ( !dataPopUp.links.includes( url ) ) {
+
+        dataPopUp.links.push( url );
+        if ( dataPopUp.links.length > 4 ) dataPopUp.links.shift();
+
+      }
+
+      console.log( "dataPopUp.links" );
+      console.log( dataPopUp.links );
+
+      chrome.storage.local.set({ links: dataPopUp.links }).then(() => {
+          console.log( "Storage links : " + dataPopUp.links );
+      });
       
       chrome.scripting.executeScript({
         target: {
@@ -213,6 +242,7 @@ function updateDataPopUp( changes, namespace, dataPopUp ) {
     for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
 
       dataDOM.dataset[ key ] = newValue;
+      console.log( newValue );
 
     }
 
@@ -259,6 +289,10 @@ async function getDataFromStorage() {
 
   await chrome.storage.local.get( [ "opacitybody" ] ).then( ( result ) => {
     dataset.opacitybody = result.opacitybody;
+  } );
+  
+  await chrome.storage.local.get( [ "links" ] ).then( ( result ) => {
+    dataset.links = result.links;
   } );
 
   return dataset;

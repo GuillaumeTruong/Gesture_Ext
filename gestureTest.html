@@ -122,6 +122,73 @@
         select.value = savedOption;
       }
     };
+
+//     const canvas = document.getElementById("canvas");
+// const ctx = canvas.getContext("2d");
+
+// function Particle(x, y, radius, color, velocity) {
+//   this.x = x;
+//   this.y = y;
+//   this.radius = radius;
+//   this.color = color;
+//   this.velocity = velocity;
+//   this.alpha = 1;
+
+//   this.draw = function () {
+//     ctx.save();
+//     ctx.globalAlpha = this.alpha;
+//     ctx.beginPath();
+//     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+//     ctx.fillStyle = this.color;
+//     ctx.fill();
+//     ctx.restore();
+//   };
+
+//   this.update = function () {
+//     this.draw();
+//     this.velocity.x *= 0.99;
+//     this.velocity.y *= 0.99;
+//     this.x += this.velocity.x;
+//     this.y += this.velocity.y;
+//     this.alpha -= 0.02;
+//   };
+// }
+
+// function createExplosion(x, y) {
+//   const particles = [];
+//   for (let i = 0; i < 30; i++) {
+//     const radius = Math.random() * 2 + 1;
+//     const color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+//     const angle = Math.random() * Math.PI * 2;
+//     const velocity = {
+//       x: Math.cos(angle) * (Math.random() * 2),
+//       y: Math.sin(angle) * (Math.random() * 2),
+//     };
+//     particles.push(new Particle(x, y, radius, color, velocity));
+//   }
+
+//   function animate() {
+//     requestAnimationFrame(animate);
+//     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+//     for (let i = 0; i < particles.length; i++) {
+//       if (particles[i].alpha > 0) {
+//         particles[i].update();
+//       } else {
+//         particles.splice(i, 1);
+//         i--;
+//       }
+//     }
+//   }
+
+//   animate();
+// }
+
+// canvas.addEventListener("click", (e) => {
+//   const x = e.clientX - canvas.getBoundingClientRect().left;
+//   const y = e.clientY - canvas.getBoundingClientRect().top;
+//   createExplosion(x, y);
+// });
   </script>
 </body>
 </html>
