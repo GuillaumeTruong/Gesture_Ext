@@ -2253,7 +2253,7 @@ function pointingHandlerKEYBOARD( landmarks, handedness ) {
 
         case "IDLE": {
 
-            if ( currentKey.has( "Space" ) ) {
+            if ( currentKey.has( "KeyX" ) ) {
 
                 handAction[ handedness ].actionState = "MOUSEDOWN";
                 initMDKEYBOARD( handedness, landmarks );
@@ -2282,7 +2282,7 @@ function pointingHandlerKEYBOARD( landmarks, handedness ) {
 
         case "MOUSEDOWN": {
 
-            if ( !currentKey.has( "Space" ) ) {
+            if ( !currentKey.has( "KeyX" ) ) {
 
                 handAction[ handedness ].actionState = "IDLE";
                 exitMDKEYBOARD( handedness, landmarks );
