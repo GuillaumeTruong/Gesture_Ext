@@ -65,8 +65,11 @@ let clickOption = {
     clickMaxTime: 500,
     clickMaxRange: 150,
     clickTimeTolerance: 150,
-    clickZRatio: 0.3
+    clickZRatio: 0.3,
+    clickAnimation: true
 };
+
+pinchRatio = 0.15;
 
 let mouseDownOption = {
     mouseDownTimeTolerance: 400,
@@ -563,6 +566,7 @@ async function predictWebcam() {
     );
 
     window.requestAnimationFrame( predictWebcam );
+    animate();
     showFPS();
 
 }
@@ -1439,7 +1443,11 @@ function readyHandler( handedness, landmarks ) {
     
     handAction[ handedness ].actionParam.timerReady = Date.now();
 
-    drawPointer( landmarks[ 8 ], 1, handedness );
+    let dist = 1 - ( handAction[ handedness ].actionParam.readyP8.z / landmarks[ 8 ].z );
+    dist = Math.max( dist, 0 );
+    dist = dist / clickOption.clickZRatio;
+    
+    drawPointer( landmarks[ 8 ], 1, handedness, 12 + dist * 10 );
 
 }
 
@@ -1495,6 +1503,11 @@ function clickHandler( handedness, landmarks ) {
             offsetX: offSet.x,
             offsetY: offSet.y
         }
+    );
+
+    if ( clickOption.clickAnimation ) createExplosion(
+        handAction[ handedness ].actionParam.readyP8.x * video.width,
+        handAction[ handedness ].actionParam.readyP8.y * video.height
     );
 
 }
@@ -1574,7 +1587,7 @@ function actionHandlerPINCH( landmarks, handednesses ) {
     let distP4P8 = distanceBetweenPoints3D( landmarks[ 4 ], landmarks[ 8 ] );
     let distP0P17 = distanceBetweenPoints3D( landmarks[ 0 ], landmarks[ 17 ] );
 
-    gesture = distP4P8 < distP0P17 * 0.2 ? "Pinch" : gesture.name;
+    gesture = distP4P8 < distP0P17 * pinchRatio ? "Pinch" : gesture.name;
 
     switch( gesture ) {
 
@@ -2041,6 +2054,8 @@ function exitMDPinch( handedness, landmarks ) {
     } ) );
 
     document.activeElement.blur();
+    
+    if ( clickOption.clickAnimation ) createExplosion( video.width - p.x, p.y );
     
 }
 
@@ -2551,6 +2566,8 @@ function exitMDKEYBOARD( handedness, landmarks ) {
 
     document.activeElement.blur();
     
+    if ( clickOption.clickAnimation ) createExplosion( video.width - p.x, p.y );
+    
 }
 
 function drawPointerKEYBOARD( point, handedness ) {
@@ -2745,10 +2762,10 @@ function clickCheck( handedness, landmarks ) {
 
 }
 
-function drawPointer( point, progression, handedness ) {
+function drawPointer( point, progression, handedness, radius = 12 ) {
     
     let color, colorOutline;
-    let radius = 16;
+    // let radius = 16;
     let p = Math.min( progression, 1 ) * 2 * Math.PI;
     let distance, vLerp, opacity;
 
@@ -2941,10 +2958,13 @@ function landmarksToXYPixelDocument( position ) {
 
     let x = video.width - ( position.x * video.width );
     let y = ( position.y * video.height );
+    let scale = twoHandsZoomParams.zoomPercent / 100;
+
     x = Math.max( x, 1 );
-    x = Math.min( x, document.body.clientWidth - 1 );
+    x = Math.min( x, Math.floor( document.body.clientWidth * scale ) - 1 );
     y = Math.max( y, 1 );
-    y = Math.min( y, window.innerHeight - ( window.innerWidth - document.body.clientWidth ) - 1 );
+    y = Math.min( y, window.innerHeight - ( window.innerWidth - Math.floor( document.body.clientWidth * scale ) ) - 1 );
+    
     return { x, y }
 
 }
@@ -2992,11 +3012,12 @@ function findElementNearPosition( position, near ) {
     let p = landmarksToXYPixelDocument( position );
     let elemList = [];
     let occurences = [];
+    let scale = twoHandsZoomParams.zoomPercent / 100;
 
-    for ( let x = Math.max( p.x - near, 1 ); x < Math.min( p.x + near, document.body.clientWidth - 1 ); x++ ) {
+    for ( let x = Math.max( p.x - near, 1 ); x < Math.min( p.x + near, Math.floor( document.body.clientWidth * scale ) - 1 ); x++ ) {
         
         for ( let y = Math.max( p.y - near, 1 );
-                y < Math.min( p.y + near, window.innerHeight - ( window.innerWidth - document.body.clientWidth ) - 1 ); y++ ) {
+                y < Math.min( p.y + near, window.innerHeight - ( window.innerWidth - Math.floor( document.body.clientWidth * scale ) ) - 1 ); y++ ) {
 
             let elements = document.elementsFromPoint( x, y );
 
@@ -3126,6 +3147,78 @@ function getDataFromStorageDynamic() {
     // console.log( "opacityBody : " + selfieOption.opacityBody );
 
     getDataTimer = Date.now();
+
+}
+
+function particle( x, y, radius, color, velocity ) {
+
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.color = color;
+    this.velocity = velocity;
+    this.alpha = 1;
+
+    this.draw = function () {
+
+        canvasCtx.save();
+        canvasCtx.globalAlpha = this.alpha;
+        canvasCtx.beginPath();
+        canvasCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        canvasCtx.fillStyle = this.color;
+        canvasCtx.fill();
+        canvasCtx.restore();
+
+    };
+
+    this.update = function () {
+        this.draw();
+        this.velocity.x *= 0.99;
+        this.velocity.y *= 0.99;
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
+        this.alpha -= 0.02;
+    };
+
+}
+
+const particles = [];
+
+function createExplosion(x, y) {
+
+
+    for (let i = 0; i < 30; i++) {
+
+        const radius = Math.random() * 2 + 1;
+        const color = `hsl(${Math.random() * 360}, 80%, 50%)`;
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = {
+            x: Math.cos(angle) * (Math.random() * 2),
+            y: Math.sin(angle) * (Math.random() * 2),
+        };
+
+        particles.push(new particle(x, y, radius, color, velocity));
+
+    }
+
+}
+
+function animate() {
+
+    for ( let i = 0; i < particles.length; i++ ) {
+
+        if ( particles[i].alpha > 0 ) {
+
+            particles[i].update();
+
+        } else {
+
+            particles.splice(i, 1);
+            i--;
+
+        }
+
+    }
 
 }
 
